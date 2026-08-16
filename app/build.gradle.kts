@@ -30,10 +30,13 @@ android {
         compose = true
     }
 
-    // The bundled Swahili lectionary DB ships read-only in assets/ and is copied
-    // to app-internal storage on first launch (see data/DatabaseProvider.kt).
+    // The bundled Swahili lectionary DB, and the bundled Swahili Bible used to resolve
+    // citations into full verse text, both ship read-only in assets/ and are copied to
+    // app-internal storage on first use (see data/DatabaseProvider.kt and
+    // data/bible/BibleDatabaseHelper.kt).
     androidResources {
         noCompress += "db"
+        noCompress += "sqlite"
     }
 }
 
@@ -57,6 +60,10 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
+
+    // Resolves a citation's Scripture text off the main thread (data/bible/BibleRepository.kt).
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.coroutines.android)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)

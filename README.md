@@ -75,3 +75,23 @@ there's nothing to "expand" — copying makes it one paste away from a Bible app
 on first launch, then queried read-only. The JSON isn't bundled — every shape it described,
 including the irregular ones, is already flattened into `readings` per the SQL query examples
 in §8, so it wasn't needed for the current feature set.
+
+## Reading engine — citations now expand into full Scripture text
+
+`data/lectionary/CitationParser.kt` parses a citation string (comma/semicolon/dash ranges,
+cross-chapter dashes, the Swahili Psalm `+`, and lettered partial verses like `6a`) into ordered
+verse references. `data/bible/BibleBooks.kt` normalizes the book name in that citation (Swahili
+or English) to the id used by the bundled `bible_swahili.sqlite` (66 books — Deuterocanonical
+First Readings like Baruku or Hekima aren't in this edition and fall back gracefully).
+`data/bible/BibleRepository.getPassage()` ties the two together against the database, opened via
+`data/bible/BibleDatabaseHelper.kt` the same way the lectionary DB is.
+
+On screen, tapping a `ReadingBlock` now resolves and reveals the actual verse text inline
+(missal-style serif, with a visible break wherever the citation skips verses) instead of only
+copying the reference. Citations that can't be resolved quietly keep the original copy-only
+behaviour — no broken "read more" affordance. A new share action on each day's readings
+(`data/sharing/DailyReadingShareFormatter.kt`) sends the full text, not just citations, formatted
+with the standard Mass-reading responses.
+
+`assets/database/bible_swahili.sqlite` ships alongside the lectionary DB and is copied to
+app-internal storage on first use, read-only from then on.

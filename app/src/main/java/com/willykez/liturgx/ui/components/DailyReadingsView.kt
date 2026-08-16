@@ -1,22 +1,35 @@
 package com.willykez.liturgx.ui.components
 
+import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import com.willykez.liturgx.core.ReadingPresenter
 import com.willykez.liturgx.data.DayResult
+import com.willykez.liturgx.data.bible.BibleRepository
+import com.willykez.liturgx.data.sharing.DailyReadingShareFormatter
 import com.willykez.liturgx.ui.theme.seasonAccent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private val swMonths = listOf(
     "Januari", "Februari", "Machi", "Aprili", "Mei", "Juni",
@@ -40,6 +53,29 @@ fun DailyReadingsView(
     val d = resolved.date
     val dateLine = "${swWeekdays[d.dayOfWeek.value - 1]}, ${d.dayOfMonth} ${swMonths[d.monthValue - 1]} ${d.year}"
 
+    val context = LocalContext.current
+    val repository = remember { BibleRepository(context.applicationContext) }
+    val scope = rememberCoroutineScope()
+    var isSharing by remember(dayResult) { mutableStateOf(false) }
+    val items = ReadingPresenter.present(dayResult.readings)
+
+    fun shareDay() {
+        if (isSharing) return
+        isSharing = true
+        scope.launch {
+            val passages = withContext(Dispatchers.IO) {
+                items.associate { it.citation to repository.getPassage(it.citation) }
+            }
+            val text = DailyReadingShareFormatter.format(dayResult, dateLine, items, passages)
+            isSharing = false
+            val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, text)
+            }
+            context.startActivity(Intent.createChooser(sendIntent, "Shiriki Masomo"))
+        }
+    }
+
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(20.dp),
@@ -47,12 +83,12 @@ fun DailyReadingsView(
     ) {
         item {
             Column {
-                if (showDateNav) {
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (showDateNav) {
                         IconButton(onClick = onPrevDay) {
                             Icon(Icons.Filled.ChevronLeft, contentDescription = "Siku iliyopita", tint = onBg)
                         }
@@ -63,6 +99,16 @@ fun DailyReadingsView(
                         }
                         IconButton(onClick = onNextDay) {
                             Icon(Icons.Filled.ChevronRight, contentDescription = "Siku ijayo", tint = onBg)
+                        }
+                        Spacer(Modifier.weight(1f))
+                    } else {
+                        Spacer(Modifier.weight(1f))
+                    }
+                    IconButton(onClick = { shareDay() }, enabled = !isSharing) {
+                        if (isSharing) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = accent)
+                        } else {
+                            Icon(Icons.Filled.IosShare, contentDescription = "Shiriki masomo ya siku", tint = onBgDim)
                         }
                     }
                 }
@@ -108,7 +154,6 @@ fun DailyReadingsView(
             }
         }
 
-        val items = ReadingPresenter.present(dayResult.readings)
         items(items) { item ->
             ReadingBlock(
                 kind = kindFor(item.kindKey),
@@ -145,6 +190,4 @@ private fun AssistChip(text: String, accentHex: androidx.compose.ui.graphics.Col
     }
 }
 
-private fun kindFor(key: String) = com.willykez.liturgx.ui.components.ReadingKind.entries.first {
-    it.name == key
-}
+private fun kindFor(key: String) = ReadingKind.entries.first { it.name == key }
