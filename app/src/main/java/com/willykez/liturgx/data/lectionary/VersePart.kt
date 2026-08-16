@@ -11,13 +11,16 @@ package com.willykez.liturgx.data.lectionary
  *
  *   - This engine CAN tell you a citation asked for "verse 6, part a" (that's what this enum is
  *     for — the letter is parsed and preserved, not discarded).
- *   - This engine CANNOT give you only the "a" half of verse 6's text — there is no data source
- *     that knows where "a" ends and "b" begins. [part] always resolves to the FULL verse text.
+ *   - This engine CANNOT give you the *exact* "a" half of verse 6's text from data alone — there
+ *     is no data source that records precisely where "a" ends and "b" begins.
  *
- * If official verse-subdivision metadata is ever bundled (e.g. a `verse_parts` table with
- * start/end character or word offsets), a resolver can consume [part] to slice the verse text
- * without any change to the parser or to this enum — that's the reason this is tracked explicitly
- * instead of being dropped during parsing, which is what the engine did before this file existed.
+ * [com.willykez.liturgx.data.bible.BibleRepository] resolves [part] anyway, with a best-effort
+ * heuristic split of the whole verse's text (by its internal poetic line break when there is
+ * exactly one, otherwise by sentence or clause boundary nearest the midpoint) — good enough for
+ * display, but not a source of truth for exact verse-subdivision boundaries. If official
+ * verse-subdivision metadata is ever bundled (e.g. a `verse_parts` table with start/end
+ * character or word offsets), that heuristic can be swapped for an exact lookup without any
+ * change to the parser or to this enum.
  */
 enum class VersePart {
     /** No letter suffix — the whole verse, e.g. "12:1". */

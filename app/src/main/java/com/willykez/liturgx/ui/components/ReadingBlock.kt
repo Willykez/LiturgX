@@ -124,7 +124,12 @@ fun ReadingBlock(
                 )
             }
             IconButton(onClick = {
-                val toCopy = passage?.takeIf { expanded }?.renderedText() ?: citation
+                val resolvedPassage = passage
+                val toCopy = if (expanded && resolvedPassage != null) {
+                    "${resolvedPassage.citation}\n\n${resolvedPassage.renderedText()}"
+                } else {
+                    citation
+                }
                 copyToClipboard(context, toCopy)
                 copied = true
             }, modifier = Modifier.size(28.dp)) {
