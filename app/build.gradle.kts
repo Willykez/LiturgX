@@ -25,9 +25,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
-    }
 
     buildFeatures {
         compose = true
@@ -38,6 +35,12 @@ android {
     androidResources {
         noCompress += "db"
     }
+}
+
+// AGP 9's auto-applied Kotlin plugin no longer exposes android { kotlinOptions {} } —
+// jvmToolchain is the modern, plugin-agnostic way to pin the Kotlin/Java target.
+kotlin {
+    jvmToolchain(17)
 }
 
 dependencies {
