@@ -2,7 +2,10 @@ package com.willykez.liturgx.ui.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -13,27 +16,56 @@ import com.willykez.liturgx.core.EpiphanyMode
 import com.willykez.liturgx.core.LiturgicalColor
 import com.willykez.liturgx.core.RegionSettings
 import com.willykez.liturgx.ui.components.SeasonBackdrop
-import com.willykez.liturgx.ui.theme.Parchment
-import com.willykez.liturgx.ui.theme.ParchmentDim
+import com.willykez.liturgx.ui.theme.ThemeMode
 import com.willykez.liturgx.ui.theme.seasonAccentSoft
 
 @Composable
 fun SettingsScreen(
     region: RegionSettings,
+    themeMode: ThemeMode,
     currentColor: LiturgicalColor,
     onRegionChange: (RegionSettings) -> Unit,
+    onThemeModeChange: (ThemeMode) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val onBg = MaterialTheme.colorScheme.onBackground
+    val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
+
     Box(modifier.fillMaxSize()) {
         SeasonBackdrop(currentColor)
-        Column(Modifier.fillMaxSize().padding(20.dp)) {
-            Text("Mipangilio ya Jimbo", style = MaterialTheme.typography.headlineSmall, color = Parchment)
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(20.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            Text("Mipangilio", style = MaterialTheme.typography.headlineSmall, color = onBg)
             Text(
-                "Mila hizi hutofautiana kati ya majimbo — chagua zinazolingana na jimbo lako.",
+                "Mwonekano wa programu na mila za jimbo lako.",
                 style = MaterialTheme.typography.labelMedium,
-                color = ParchmentDim
+                color = onBgDim
             )
             Spacer(Modifier.height(20.dp))
+
+            SettingCard(
+                title = "Mwonekano",
+                description = "Chagua mwonekano wa mwanga au giza, au uache programu ifuate mfumo wa simu yako.",
+                color = currentColor
+            ) {
+                Column(Modifier.fillMaxWidth()) {
+                    ThemeMode.entries.forEach { mode ->
+                        ThemeModeRow(
+                            label = mode.label,
+                            selected = themeMode == mode,
+                            accentColor = currentColor,
+                            onClick = { onThemeModeChange(mode) }
+                        )
+                        if (mode != ThemeMode.entries.last()) Spacer(Modifier.height(2.dp))
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(14.dp))
 
             SettingCard(
                 title = "Epifania",
@@ -45,7 +77,7 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Hamishiwa Dominika", color = Parchment, style = MaterialTheme.typography.bodyMedium)
+                    Text("Hamishiwa Dominika", color = onBg, style = MaterialTheme.typography.bodyMedium)
                     Switch(
                         checked = region.epiphanyMode == EpiphanyMode.TRANSFERRED,
                         onCheckedChange = { checked ->
@@ -67,7 +99,7 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Shika Alhamisi", color = Parchment, style = MaterialTheme.typography.bodyMedium)
+                    Text("Shika Alhamisi", color = onBg, style = MaterialTheme.typography.bodyMedium)
                     Switch(
                         checked = region.keepThursdaySolemnities,
                         onCheckedChange = { onRegionChange(region.copy(keepThursdaySolemnities = it)) }
@@ -79,9 +111,27 @@ fun SettingsScreen(
             Text(
                 "LiturgX · Masomo ya Kila Siku kwa Kiswahili",
                 style = MaterialTheme.typography.labelSmall,
-                color = ParchmentDim
+                color = onBgDim
             )
+            Spacer(Modifier.height(20.dp))
         }
+    }
+}
+
+@Composable
+private fun ThemeModeRow(label: String, selected: Boolean, accentColor: LiturgicalColor, onClick: () -> Unit) {
+    val onBg = MaterialTheme.colorScheme.onBackground
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .selectable(selected = selected, onClick = onClick)
+            .padding(vertical = 10.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(selected = selected, onClick = onClick)
+        Spacer(Modifier.width(8.dp))
+        Text(label, color = onBg, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
@@ -92,6 +142,8 @@ private fun SettingCard(
     color: LiturgicalColor,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val onBg = MaterialTheme.colorScheme.onBackground
+    val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
     Column(
         Modifier
             .fillMaxWidth()
@@ -99,9 +151,9 @@ private fun SettingCard(
             .background(seasonAccentSoft(color))
             .padding(16.dp)
     ) {
-        Text(title, style = MaterialTheme.typography.titleMedium, color = Parchment)
+        Text(title, style = MaterialTheme.typography.titleMedium, color = onBg)
         Spacer(Modifier.height(4.dp))
-        Text(description, style = MaterialTheme.typography.labelMedium, color = ParchmentDim)
+        Text(description, style = MaterialTheme.typography.labelMedium, color = onBgDim)
         Spacer(Modifier.height(12.dp))
         content()
     }

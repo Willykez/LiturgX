@@ -16,8 +16,6 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import com.willykez.liturgx.core.ReadingPresenter
 import com.willykez.liturgx.data.DayResult
-import com.willykez.liturgx.ui.theme.Parchment
-import com.willykez.liturgx.ui.theme.ParchmentDim
 import com.willykez.liturgx.ui.theme.seasonAccent
 
 private val swMonths = listOf(
@@ -37,6 +35,8 @@ fun DailyReadingsView(
 ) {
     val resolved = dayResult.resolved
     val accent = seasonAccent(resolved.color)
+    val onBg = MaterialTheme.colorScheme.onBackground
+    val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
     val d = resolved.date
     val dateLine = "${swWeekdays[d.dayOfWeek.value - 1]}, ${d.dayOfMonth} ${swMonths[d.monthValue - 1]} ${d.year}"
 
@@ -54,7 +54,7 @@ fun DailyReadingsView(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         IconButton(onClick = onPrevDay) {
-                            Icon(Icons.Filled.ChevronLeft, contentDescription = "Siku iliyopita", tint = Parchment)
+                            Icon(Icons.Filled.ChevronLeft, contentDescription = "Siku iliyopita", tint = onBg)
                         }
                         TextButton(onClick = onJumpToToday) {
                             Icon(Icons.Filled.Today, contentDescription = null, tint = accent, modifier = Modifier.size(16.dp))
@@ -62,12 +62,12 @@ fun DailyReadingsView(
                             Text("Leo", color = accent, style = MaterialTheme.typography.labelLarge)
                         }
                         IconButton(onClick = onNextDay) {
-                            Icon(Icons.Filled.ChevronRight, contentDescription = "Siku ijayo", tint = Parchment)
+                            Icon(Icons.Filled.ChevronRight, contentDescription = "Siku ijayo", tint = onBg)
                         }
                     }
                 }
 
-                Text(dateLine, style = MaterialTheme.typography.labelMedium, color = ParchmentDim)
+                Text(dateLine, style = MaterialTheme.typography.labelMedium, color = onBgDim)
                 Spacer(Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     LiturgicalSeal(resolved.color, size = 40.dp)
@@ -76,10 +76,10 @@ fun DailyReadingsView(
                         Text(
                             resolved.overridingSaint?.jina ?: resolved.label,
                             style = MaterialTheme.typography.headlineSmall,
-                            color = Parchment
+                            color = onBg
                         )
                         Text(
-                            "Rangi ya LiturgX: ${resolved.color.swahili}"
+                            "Rangi ya Liturujia: ${resolved.color.swahili}"
                                     + (resolved.cycleYear?.let { " · Mwaka $it" } ?: "")
                                     + (resolved.weekdayCycle?.let { " · Mzunguko $it" } ?: ""),
                             style = MaterialTheme.typography.labelSmall,
@@ -95,12 +95,12 @@ fun DailyReadingsView(
                 dayResult.optionalMemorial?.let { memorial ->
                     Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Star, contentDescription = null, tint = ParchmentDim, modifier = Modifier.size(14.dp))
+                        Icon(Icons.Filled.Star, contentDescription = null, tint = onBgDim, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(6.dp))
                         Text(
                             "Leo pia ni ukumbusho wa hiari wa ${memorial.jina}",
                             style = MaterialTheme.typography.labelMedium,
-                            color = ParchmentDim,
+                            color = onBgDim,
                             fontStyle = FontStyle.Italic
                         )
                     }
@@ -123,7 +123,7 @@ fun DailyReadingsView(
                 Text(
                     "Hamna masomo yaliyopatikana kwa siku hii kwenye hifadhidata.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = ParchmentDim
+                    color = onBgDim
                 )
             }
         }

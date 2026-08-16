@@ -21,8 +21,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.willykez.liturgx.core.LiturgicalColor
-import com.willykez.liturgx.ui.theme.Parchment
-import com.willykez.liturgx.ui.theme.ParchmentDim
 import com.willykez.liturgx.ui.theme.seasonAccent
 import com.willykez.liturgx.ui.theme.seasonAccentSoft
 
@@ -48,6 +46,8 @@ fun ReadingBlock(
     label: String? = null
 ) {
     val accent = seasonAccent(color)
+    val onBg = MaterialTheme.colorScheme.onBackground
+    val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
     val context = LocalContext.current
     var copied by remember { mutableStateOf(false) }
 
@@ -68,12 +68,12 @@ fun ReadingBlock(
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(label ?: kind.label, style = MaterialTheme.typography.titleSmall, color = accent)
-            Text(citation, style = MaterialTheme.typography.bodyLarge, color = Parchment)
+            Text(citation, style = MaterialTheme.typography.bodyLarge, color = onBg)
         }
         Icon(
             if (copied) Icons.Filled.Check else Icons.Filled.ContentCopy,
             contentDescription = "Nakili rejea",
-            tint = if (copied) accent else ParchmentDim,
+            tint = if (copied) accent else onBgDim,
             modifier = Modifier.size(18.dp)
         )
     }

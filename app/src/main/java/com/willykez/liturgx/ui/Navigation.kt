@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -15,9 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -27,10 +26,8 @@ import com.willykez.liturgx.ui.calendar.CalendarScreen
 import com.willykez.liturgx.ui.home.HomeScreen
 import com.willykez.liturgx.ui.saints.SaintsScreen
 import com.willykez.liturgx.ui.settings.SettingsScreen
-import com.willykez.liturgx.ui.theme.Ink
 import com.willykez.liturgx.ui.theme.LiturgXTheme
-import com.willykez.liturgx.ui.theme.Parchment
-import com.willykez.liturgx.ui.theme.ParchmentDim
+import com.willykez.liturgx.ui.theme.isDarkThemeActive
 import com.willykez.liturgx.ui.theme.seasonAccent
 
 private sealed class Dest(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
@@ -54,11 +51,16 @@ fun LiturgXApp() {
     val accentColor = if (currentRoute == Dest.Leo.route) vm.todayResult.resolved.color
     else vm.selectedResult.resolved.color
 
-    LiturgXTheme(accent = accentColor) {
+    val darkTheme = isDarkThemeActive(vm.themeMode)
+
+    LiturgXTheme(accent = accentColor, darkTheme = darkTheme) {
+        val background = MaterialTheme.colorScheme.background
+        val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
+
         Scaffold(
-            containerColor = Ink,
+            containerColor = background,
             bottomBar = {
-                NavigationBar(containerColor = Ink) {
+                NavigationBar(containerColor = background) {
                     val accent = seasonAccent(accentColor)
                     destinations.forEach { dest ->
                         val selected = currentRoute == dest.route
@@ -76,8 +78,8 @@ fun LiturgXApp() {
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = accent,
                                 selectedTextColor = accent,
-                                unselectedIconColor = ParchmentDim,
-                                unselectedTextColor = ParchmentDim,
+                                unselectedIconColor = onSurfaceVariant,
+                                unselectedTextColor = onSurfaceVariant,
                                 indicatorColor = accent.copy(alpha = 0.18f)
                             )
                         )
@@ -108,8 +110,10 @@ fun LiturgXApp() {
                 composable(Dest.Mipangilio.route) {
                     SettingsScreen(
                         region = vm.region,
+                        themeMode = vm.themeMode,
                         currentColor = vm.selectedResult.resolved.color,
-                        onRegionChange = { vm.updateRegion(it) }
+                        onRegionChange = { vm.updateRegion(it) },
+                        onThemeModeChange = { vm.updateThemeMode(it) }
                     )
                 }
             }

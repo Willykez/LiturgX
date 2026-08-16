@@ -17,8 +17,6 @@ import com.willykez.liturgx.core.LiturgicalColor
 import com.willykez.liturgx.core.Saint
 import com.willykez.liturgx.ui.components.LiturgicalSeal
 import com.willykez.liturgx.ui.components.SeasonBackdrop
-import com.willykez.liturgx.ui.theme.Parchment
-import com.willykez.liturgx.ui.theme.ParchmentDim
 import com.willykez.liturgx.ui.theme.seasonAccentSoft
 
 @Composable
@@ -30,14 +28,17 @@ fun SaintsScreen(saints: List<Saint>, currentColor: LiturgicalColor, modifier: M
         }
     }
 
+    val onBg = MaterialTheme.colorScheme.onBackground
+    val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
+
     Box(modifier.fillMaxSize()) {
         SeasonBackdrop(currentColor)
         Column(Modifier.fillMaxSize().padding(20.dp)) {
-            Text("Kalenda ya Watakatifu", style = MaterialTheme.typography.headlineSmall, color = Parchment)
+            Text("Kalenda ya Watakatifu", style = MaterialTheme.typography.headlineSmall, color = onBg)
             Text(
                 "Orodha teule ya sikukuu na kumbukumbu",
                 style = MaterialTheme.typography.labelMedium,
-                color = ParchmentDim
+                color = onBgDim
             )
             Spacer(Modifier.height(14.dp))
             OutlinedTextField(
@@ -59,6 +60,8 @@ fun SaintsScreen(saints: List<Saint>, currentColor: LiturgicalColor, modifier: M
 @Composable
 private fun SaintRow(saint: Saint) {
     val color = LiturgicalColor.fromSwahili(saint.rangi)
+    val onBg = MaterialTheme.colorScheme.onBackground
+    val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -70,8 +73,8 @@ private fun SaintRow(saint: Saint) {
         LiturgicalSeal(color, size = 34.dp)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(saint.jina, style = MaterialTheme.typography.titleMedium, color = Parchment)
-            Text("${saint.tarehe} · ${saint.daraja}", style = MaterialTheme.typography.labelMedium, color = ParchmentDim)
+            Text(saint.jina, style = MaterialTheme.typography.titleMedium, color = onBg)
+            Text("${saint.tarehe} · ${saint.daraja}", style = MaterialTheme.typography.labelMedium, color = onBgDim)
         }
     }
 }

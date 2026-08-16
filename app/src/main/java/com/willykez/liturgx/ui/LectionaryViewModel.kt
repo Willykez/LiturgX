@@ -9,6 +9,7 @@ import com.willykez.liturgx.core.RegionSettings
 import com.willykez.liturgx.data.DayResult
 import com.willykez.liturgx.data.LectionaryRepository
 import com.willykez.liturgx.data.SettingsStore
+import com.willykez.liturgx.ui.theme.ThemeMode
 import java.time.LocalDate
 
 class LectionaryViewModel(app: Application) : AndroidViewModel(app) {
@@ -17,6 +18,9 @@ class LectionaryViewModel(app: Application) : AndroidViewModel(app) {
     private val settingsStore = SettingsStore(app)
 
     var region by mutableStateOf(settingsStore.load())
+        private set
+
+    var themeMode by mutableStateOf(settingsStore.loadThemeMode())
         private set
 
     var today by mutableStateOf(LocalDate.now())
@@ -44,6 +48,11 @@ class LectionaryViewModel(app: Application) : AndroidViewModel(app) {
         region = newRegion
         settingsStore.save(newRegion)
         refreshAll()
+    }
+
+    fun updateThemeMode(mode: ThemeMode) {
+        themeMode = mode
+        settingsStore.saveThemeMode(mode)
     }
 
     private fun refreshAll() {
