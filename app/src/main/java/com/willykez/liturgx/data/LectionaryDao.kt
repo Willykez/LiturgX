@@ -18,7 +18,7 @@ class LectionaryDao(private val db: SQLiteDatabase) {
         somoLaPili = getString(getColumnIndexOrThrow("somo_la_pili")),
         shangilio = getString(getColumnIndexOrThrow("shangilio")),
         injili = getString(getColumnIndexOrThrow("injili")),
-        mwakaLiturgX = getString(getColumnIndexOrThrow("mwaka_liturgx"))
+        mwakaLiturujia = getString(getColumnIndexOrThrow("mwaka_liturujia"))
     )
 
     /** Fetch one or more entry_key rows for a period, optionally filtered by the `day` column. */

@@ -56,7 +56,7 @@ data class Reading(
     val somoLaPili: String?,
     val shangilio: String?,
     val injili: String?,
-    val mwakaLiturgX: String?
+    val mwakaLiturujia: String?
 )
 
 data class Saint(
