@@ -40,11 +40,11 @@ jobs:
             exit 1
           fi
 
-          cp "$APK_PATH" "AuraOrbit-release-unsigned.apk"
+          cp "$APK_PATH" "LiturgX-unsigned.apk"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: "AuraOrbit-release-unsigned"
-          path: "AuraOrbit-release-unsigned.apk"
+          name: "LiturgX-unsigned"
+          path: "LiturgX-unsigned.apk"
           if-no-files-found: error
