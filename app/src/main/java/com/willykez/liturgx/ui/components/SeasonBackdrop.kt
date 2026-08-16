@@ -1,0 +1,42 @@
+package com.willykez.liturgx.ui.components
+
+import androidx.compose.animation.core.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import com.willykez.liturgx.core.LiturgicalColor
+import com.willykez.liturgx.ui.theme.Ink
+import com.willykez.liturgx.ui.theme.seasonAccent
+
+/**
+ * Two soft radial "candle" glows — one warm top-left, one the day's liturgical colour
+ * bottom-right — over the near-black base. Colour animates smoothly when the resolved
+ * day (and therefore the season) changes, so browsing the calendar feels alive rather
+ * than like flipping static pages.
+ */
+@Composable
+fun SeasonBackdrop(color: LiturgicalColor, modifier: Modifier = Modifier) {
+    val accent by animateColorAsState(seasonAccent(color), tween(600), label = "seasonAccent")
+    Canvas(modifier = modifier.fillMaxSize()) {
+        drawRect(Ink)
+        drawRect(
+            brush = Brush.radialGradient(
+                colors = listOf(accent.copy(alpha = 0.35f), Color.Transparent),
+                center = Offset(size.width * 0.85f, size.height * 0.05f),
+                radius = size.maxDimension * 0.6f
+            )
+        )
+        drawRect(
+            brush = Brush.radialGradient(
+                colors = listOf(accent.copy(alpha = 0.22f), Color.Transparent),
+                center = Offset(size.width * 0.1f, size.height * 0.9f),
+                radius = size.maxDimension * 0.7f
+            )
+        )
+    }
+}

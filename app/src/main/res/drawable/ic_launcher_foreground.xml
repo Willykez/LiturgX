@@ -1,8 +1,16 @@
-<?xml version="1.0" encoding="utf-8"?>
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item
-        android:width="66dp"
-        android:height="66dp"
-        android:drawable="@drawable/ic_litcal_fg_1786543847411"
-        android:gravity="center" />
-</layer-list>
+<vector xmlns:android="http://schemas.android.com/apk/res/vector"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path
+        android:fillColor="#F6EFE1"
+        android:pathData="M54,26 C60,36 66,42 66,52 C66,61.4 60.6,68 54,68 C47.4,68 42,61.4 42,52 C42,42 48,36 54,26 Z" />
+    <path
+        android:fillColor="#C9A227"
+        android:pathData="M54,38 C57,44 60,47 60,53 C60,58.5 57.3,62 54,62 C50.7,62 48,58.5 48,53 C48,47 51,44 54,38 Z" />
+    <path
+        android:fillColor="#F6EFE1"
+        android:pathData="M40,74 L68,74 L68,80 L40,80 Z" />
+    <path
+        android:fillColor="#F6EFE1"
+        android:pathData="M34,82 L74,82 L74,88 L34,88 Z" />
+</vector>

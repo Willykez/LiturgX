@@ -1,6 +1,0 @@
-{
-  "name": "Liturgical Calendar",
-  "description": "Daily Mass readings, reflections, offline prayer mode, dark mode, and custom feast day notifications.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

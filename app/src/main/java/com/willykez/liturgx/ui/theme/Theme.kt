@@ -1,98 +1,40 @@
 package com.willykez.liturgx.ui.theme
 
-import android.app.Activity
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalView
-import androidx.core.view.WindowCompat
+import com.willykez.liturgx.core.LiturgicalColor
 
-private val LightColorScheme = lightColorScheme(
-    primary = AccentLight,
-    onPrimary = Color.White,
-    primaryContainer = PaperSurfaceVariant,
-    onPrimaryContainer = InkPrimary,
-    secondary = InkSecondary,
-    background = PaperBackground,
-    surface = PaperSurface,
-    surfaceVariant = PaperSurfaceVariant,
-    surfaceTint = AccentLight,
-    onBackground = InkPrimary,
-    onSurface = InkPrimary,
-    onSurfaceVariant = InkSecondary,
-    error = ErrorLight
-)
+/**
+ * The whole app is themed around a single idea: the liturgical colour of *today* IS the
+ * app's accent colour. Everything — the hero card, the nav bar glow, the reading-card
+ * borders — derives from whichever LiturgicalColor the resolver returns, so the app
+ * visually changes its mood with the calendar, the way vestments do in church.
+ */
 
-private val DarkColorScheme = darkColorScheme(
-    primary = AccentDark,
-    onPrimary = Color.Black,
-    primaryContainer = NightSurfaceVariant,
-    onPrimaryContainer = NightTextPrimary,
-    secondary = NightTextSecondary,
-    background = NightBackground,
-    surface = NightSurface,
-    surfaceVariant = NightSurfaceVariant,
-    surfaceTint = AccentDark,
-    onBackground = NightTextPrimary,
-    onSurface = NightTextPrimary,
-    onSurfaceVariant = NightTextSecondary,
-    error = ErrorDark
-)
+val Ink = Color(0xFF120F1A)          // near-black base, gives every season's colour room to glow
+val InkElevated = Color(0xFF1B1726)
+val Parchment = Color(0xFFF6EFE1)    // warm off-white for scripture text — reads like a page, not a screen
+val ParchmentDim = Color(0xFFCFC6B8)
 
-private val EveningColorScheme = darkColorScheme(
-    primary = AccentDark,
-    onPrimary = Color.Black,
-    primaryContainer = Color(0xFF2A2116),
-    onPrimaryContainer = EveningTextPrimary,
-    secondary = EveningTextSecondary,
-    background = EveningBackground,
-    surface = EveningSurface,
-    surfaceVariant = Color(0xFF29231B),
-    surfaceTint = AccentDark,
-    onBackground = EveningTextPrimary,
-    onSurface = EveningTextPrimary,
-    onSurfaceVariant = EveningTextSecondary,
-    error = ErrorDark
-)
+fun seasonAccent(color: LiturgicalColor): Color = Color(color.hex)
 
-enum class ThemeMode {
-    SYSTEM, LIGHT, DARK, EVENING
-}
+fun seasonAccentSoft(color: LiturgicalColor): Color = seasonAccent(color).copy(alpha = 0.16f)
 
 @Composable
-fun LiturgicalCalendarTheme(
-    themeMode: ThemeMode = ThemeMode.SYSTEM,
-    content: @Composable () -> Unit
-) {
-    val darkTheme = when (themeMode) {
-        ThemeMode.SYSTEM -> isSystemInDarkTheme()
-        ThemeMode.LIGHT -> false
-        ThemeMode.DARK, ThemeMode.EVENING -> true
-    }
-
-    val colorScheme = when {
-        themeMode == ThemeMode.EVENING -> EveningColorScheme
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
-
-    val view = LocalView.current
-    if (!view.isInEditMode) {
-        SideEffect {
-            val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.background.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
-        }
-    }
-
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
+fun LiturgXTheme(accent: LiturgicalColor, content: @Composable () -> Unit) {
+    val scheme = darkColorScheme(
+        primary = seasonAccent(accent),
+        onPrimary = Parchment,
+        secondary = seasonAccent(accent),
+        background = Ink,
+        onBackground = Parchment,
+        surface = InkElevated,
+        onSurface = Parchment,
+        surfaceVariant = InkElevated,
+        onSurfaceVariant = ParchmentDim,
+        outline = ParchmentDim.copy(alpha = 0.3f)
     )
+    MaterialTheme(colorScheme = scheme, typography = LiturgXTypography, content = content)
 }
