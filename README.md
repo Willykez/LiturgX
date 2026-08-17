@@ -114,8 +114,37 @@ Home, not Kalenda, since a streak is about today's habit, not whichever date you
 **Share as image** (`ui/components/LiturgicalCard.kt`, `ShareCardDialog.kt`,
 `data/sharing/ImageShareUtils.kt`): each `ReadingBlock` can render itself as a shareable card
 (open-missal palette, not a generic template) via `rememberGraphicsLayer()`, previewed in a
-dialog before sharing through a `FileProvider` content:// URI.
+dialog before sharing through a `FileProvider` content:// URI. The day's share icon
+(`DailyReadingsView`) opens a menu of all three export modes below rather than a single fixed
+action.
 
 **Launcher icon**: an open book with a cross rising from the spine and a ribbon bookmark,
 replacing the previous abstract flame shape — reads as "Scripture app" at a glance, verified
 against adaptive-icon mask cropping and at 48dp.
+
+## Bible browser, cross-reading search, and full-day exports
+
+**Browser & search** (`data/bible/BibleBrowseRepository.kt`, `ui/bible/`): a "Biblia" tab
+separate from the Lectionary — browse any of the 66 books/chapters, or free-text search every
+verse. Two schema details this relies on, both verified directly against the shipped
+`bible_swahili.sqlite` rather than assumed:
+- `chapters._id` is already in canonical Bible order (Mwanzo → Ufunuo), and `chapters.num` is
+  the book's total chapter count directly — no extra query needed for either.
+- True verse/heading reading order is `texts.rank`, not `texts.position` — a handful of section
+  headings land *after* the verse they're commonly assumed to precede (e.g. Mwanzo 4:16's "Wazawa
+  wa Kaini" heading), so sorting by position alone misplaces them by one verse.
+
+Search does a SQL `LIKE` prefilter, then re-verifies each hit against only the Swahili portion
+of the row (the raw text carries an appended English gloss the person isn't searching in) before
+accepting it — precision over trusting the database match alone. Tapping a result opens the
+reader scrolled to and highlighting that verse.
+
+**Full-day image card** (`ui/components/DailyLiturgicalCard.kt`, `DailyShareCardDialog.kt`):
+the single-reading share card extended to lay out every reading of the day in one continuous
+sheet, not just one at a time.
+
+**PDF export** (`data/sharing/DailyReadingPdfGenerator.kt`): a paginated A4 PDF of the full day
+via `android.graphics.pdf.PdfDocument` + `StaticLayout`. The pagination is line-exact, not a
+per-block "does it fit" guess — a single long reading can and does split mid-paragraph across a
+page boundary at the correct line, the way a word processor would, rather than overflowing the
+page or wasting the remaining space on it.

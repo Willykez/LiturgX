@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.willykez.liturgx.core.LiturgicalColor
+import com.willykez.liturgx.core.ReadingPresenter
 import com.willykez.liturgx.data.bible.BiblePassage
 import com.willykez.liturgx.data.bible.BibleRepository
 import com.willykez.liturgx.ui.theme.seasonAccent
@@ -172,11 +173,7 @@ fun ReadingBlock(
     }
 
     if (showShareCard) {
-        val response = when (kind) {
-            ReadingKind.SOMO_LA_KWANZA, ReadingKind.SOMO_LA_PILI -> "Neno la Bwana.\nS: Tumshukuru Mungu."
-            ReadingKind.INJILI -> "Injili ya Bwana Yesu Kristo.\nS: Sifa kwako Ee Kristo."
-            else -> null
-        }
+        val response = ReadingPresenter.massResponseFor(kind.name)
         ShareCardDialog(
             dateText = dateText,
             seasonText = seasonLabel,

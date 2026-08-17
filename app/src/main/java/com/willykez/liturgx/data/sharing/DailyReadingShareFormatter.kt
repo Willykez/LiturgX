@@ -1,6 +1,7 @@
 package com.willykez.liturgx.data.sharing
 
 import com.willykez.liturgx.core.ReadingItem
+import com.willykez.liturgx.core.ReadingPresenter
 import com.willykez.liturgx.data.DayResult
 import com.willykez.liturgx.data.bible.BiblePassage
 
@@ -45,17 +46,9 @@ object DailyReadingShareFormatter {
             val body = passages[item.citation]?.renderedText() ?: item.citation
             sb.appendLine(body)
             sb.appendLine()
-            when (item.kindKey) {
-                "SOMO_LA_KWANZA", "SOMO_LA_PILI" -> {
-                    sb.appendLine("Neno la Bwana.")
-                    sb.appendLine("S: Tumshukuru Mungu.")
-                    sb.appendLine()
-                }
-                "INJILI" -> {
-                    sb.appendLine("Injili ya Bwana Yesu Kristo.")
-                    sb.appendLine("S: Sifa kwako Ee Kristo.")
-                    sb.appendLine()
-                }
+            ReadingPresenter.massResponseFor(item.kindKey)?.let { response ->
+                sb.appendLine(response)
+                sb.appendLine()
             }
         }
 

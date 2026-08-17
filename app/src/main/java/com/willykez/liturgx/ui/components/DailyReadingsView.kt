@@ -8,8 +8,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.IosShare
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.TextSnippet
 import androidx.compose.material.icons.filled.Today
+import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -25,7 +28,10 @@ import androidx.compose.ui.unit.dp
 import com.willykez.liturgx.core.ReadingPresenter
 import com.willykez.liturgx.data.DayResult
 import com.willykez.liturgx.data.bible.BibleRepository
+import com.willykez.liturgx.data.sharing.DailyReadingPdfGenerator
 import com.willykez.liturgx.data.sharing.DailyReadingShareFormatter
+import com.willykez.liturgx.data.sharing.DayCardReading
+import com.willykez.liturgx.data.sharing.PdfShareUtils
 import com.willykez.liturgx.ui.theme.seasonAccent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -36,6 +42,8 @@ private val swMonths = listOf(
     "Julai", "Agosti", "Septemba", "Oktoba", "Novemba", "Desemba"
 )
 private val swWeekdays = listOf("Jumatatu", "Jumanne", "Jumatano", "Alhamisi", "Ijumaa", "Jumamosi", "Jumapili")
+
+private enum class SharePreparing { NONE, TEXT, PDF }
 
 @Composable
 fun DailyReadingsView(
@@ -53,27 +61,65 @@ fun DailyReadingsView(
     val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
     val d = resolved.date
     val dateLine = "${swWeekdays[d.dayOfWeek.value - 1]}, ${d.dayOfMonth} ${swMonths[d.monthValue - 1]} ${d.year}"
+    val seasonLabel = resolved.overridingSaint?.jina ?: resolved.label
 
     val context = LocalContext.current
     val repository = remember { BibleRepository(context.applicationContext) }
     val scope = rememberCoroutineScope()
-    var isSharing by remember(dayResult) { mutableStateOf(false) }
+    var preparing by remember(dayResult) { mutableStateOf(SharePreparing.NONE) }
+    var showShareMenu by remember(dayResult) { mutableStateOf(false) }
+    var showImageCard by remember(dayResult) { mutableStateOf(false) }
+    var dayCardReadings by remember(dayResult) { mutableStateOf<List<DayCardReading>?>(null) }
     val items = ReadingPresenter.present(dayResult.readings)
 
-    fun shareDay() {
-        if (isSharing) return
-        isSharing = true
+    suspend fun resolveDayCardReadings(): List<DayCardReading> =
+        withContext(Dispatchers.IO) {
+            items.map { item ->
+                val passage = repository.getPassage(item.citation)
+                DayCardReading(
+                    kindLabel = item.label,
+                    citation = item.citation,
+                    passageText = passage?.renderedText() ?: item.citation,
+                    responseText = ReadingPresenter.massResponseFor(item.kindKey)
+                )
+            }
+        }
+
+    fun shareAsText() {
+        if (preparing != SharePreparing.NONE) return
+        preparing = SharePreparing.TEXT
         scope.launch {
             val passages = withContext(Dispatchers.IO) {
                 items.associate { it.citation to repository.getPassage(it.citation) }
             }
             val text = DailyReadingShareFormatter.format(dayResult, dateLine, items, passages)
-            isSharing = false
+            preparing = SharePreparing.NONE
             val sendIntent = Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
                 putExtra(Intent.EXTRA_TEXT, text)
             }
             context.startActivity(Intent.createChooser(sendIntent, "Shiriki Masomo"))
+        }
+    }
+
+    fun shareAsImage() {
+        if (preparing != SharePreparing.NONE) return
+        scope.launch {
+            dayCardReadings = resolveDayCardReadings()
+            showImageCard = true
+        }
+    }
+
+    fun shareAsPdf() {
+        if (preparing != SharePreparing.NONE) return
+        preparing = SharePreparing.PDF
+        scope.launch {
+            val readings = resolveDayCardReadings()
+            val file = withContext(Dispatchers.IO) {
+                DailyReadingPdfGenerator.generate(context, dateLine, seasonLabel, resolved.color, readings)
+            }
+            preparing = SharePreparing.NONE
+            PdfShareUtils.share(context, file)
         }
     }
 
@@ -105,11 +151,30 @@ fun DailyReadingsView(
                     } else {
                         Spacer(Modifier.weight(1f))
                     }
-                    IconButton(onClick = { shareDay() }, enabled = !isSharing) {
-                        if (isSharing) {
-                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = accent)
-                        } else {
-                            Icon(Icons.Filled.IosShare, contentDescription = "Shiriki masomo ya siku", tint = onBgDim)
+                    Box {
+                        IconButton(onClick = { showShareMenu = true }, enabled = preparing == SharePreparing.NONE) {
+                            if (preparing != SharePreparing.NONE) {
+                                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = accent)
+                            } else {
+                                Icon(Icons.Filled.IosShare, contentDescription = "Shiriki masomo ya siku", tint = onBgDim)
+                            }
+                        }
+                        DropdownMenu(expanded = showShareMenu, onDismissRequest = { showShareMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text("Shiriki kama Maandishi") },
+                                leadingIcon = { Icon(Icons.Filled.TextSnippet, contentDescription = null) },
+                                onClick = { showShareMenu = false; shareAsText() }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Shiriki kama Picha") },
+                                leadingIcon = { Icon(Icons.Outlined.Image, contentDescription = null) },
+                                onClick = { showShareMenu = false; shareAsImage() }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Hifadhi kama PDF") },
+                                leadingIcon = { Icon(Icons.Filled.PictureAsPdf, contentDescription = null) },
+                                onClick = { showShareMenu = false; shareAsPdf() }
+                            )
                         }
                     }
                 }
@@ -121,7 +186,7 @@ fun DailyReadingsView(
                     Spacer(Modifier.width(14.dp))
                     Column {
                         Text(
-                            resolved.overridingSaint?.jina ?: resolved.label,
+                            seasonLabel,
                             style = MaterialTheme.typography.headlineSmall,
                             color = onBg
                         )
@@ -165,7 +230,7 @@ fun DailyReadingsView(
                 citation = item.citation,
                 color = resolved.color,
                 dateText = dateLine,
-                seasonLabel = resolved.overridingSaint?.jina ?: resolved.label,
+                seasonLabel = seasonLabel,
                 label = item.label
             )
         }
@@ -179,6 +244,17 @@ fun DailyReadingsView(
                 )
             }
         }
+    }
+
+    val cardReadings = dayCardReadings
+    if (showImageCard && cardReadings != null) {
+        DailyShareCardDialog(
+            dateText = dateLine,
+            seasonText = seasonLabel,
+            readings = cardReadings,
+            liturgicalColor = resolved.color,
+            onDismiss = { showImageCard = false }
+        )
     }
 }
 

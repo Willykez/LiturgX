@@ -3,6 +3,7 @@ package com.willykez.liturgx.ui
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.WbSunny
@@ -22,6 +23,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.willykez.liturgx.ui.bible.BibleScreen
 import com.willykez.liturgx.ui.calendar.CalendarScreen
 import com.willykez.liturgx.ui.home.HomeScreen
 import com.willykez.liturgx.ui.saints.SaintsScreen
@@ -33,11 +35,12 @@ import com.willykez.liturgx.ui.theme.seasonAccent
 private sealed class Dest(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
     object Leo : Dest("leo", "Leo", Icons.Filled.WbSunny)
     object Kalenda : Dest("kalenda", "Kalenda", Icons.Filled.CalendarMonth)
+    object Biblia : Dest("biblia", "Biblia", Icons.Filled.MenuBook)
     object Watakatifu : Dest("watakatifu", "Watakatifu", Icons.Filled.Star)
     object Mipangilio : Dest("mipangilio", "Mipangilio", Icons.Filled.Settings)
 }
 
-private val destinations = listOf(Dest.Leo, Dest.Kalenda, Dest.Watakatifu, Dest.Mipangilio)
+private val destinations = listOf(Dest.Leo, Dest.Kalenda, Dest.Biblia, Dest.Watakatifu, Dest.Mipangilio)
 
 @Composable
 fun LiturgXApp() {
@@ -106,6 +109,9 @@ fun LiturgXApp() {
                 }
                 composable(Dest.Watakatifu.route) {
                     SaintsScreen(saints = vm.saintsList(), currentColor = vm.selectedResult.resolved.color)
+                }
+                composable(Dest.Biblia.route) {
+                    BibleScreen(currentColor = vm.selectedResult.resolved.color)
                 }
                 composable(Dest.Mipangilio.route) {
                     SettingsScreen(

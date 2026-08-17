@@ -51,4 +51,18 @@ object ReadingPresenter {
         r.shangilio?.let { items += ReadingItem("SHANGILIO", "Shangilio", it) }
         r.injili?.let { items += ReadingItem("INJILI", "Injili", it) }
     }
+
+    /**
+     * The standard spoken Mass response after a reading, keyed by [ReadingItem.kindKey].
+     * Only the two Scripture readings and the Gospel get one -- the Responsorial Psalm/Wimbo
+     * and the Gospel Acclamation/Shangilio are themselves sung responses, not readings that are
+     * responded *to*. Centralized here (rather than duplicated per call site) since every
+     * sharing surface -- [com.willykez.liturgx.ui.components.ReadingBlock]'s image card, the
+     * plain-text day share, the full-day image card, and the PDF export -- needs the same text.
+     */
+    fun massResponseFor(kindKey: String): String? = when (kindKey) {
+        "SOMO_LA_KWANZA", "SOMO_LA_PILI" -> "Neno la Bwana.\nS: Tumshukuru Mungu."
+        "INJILI" -> "Injili ya Bwana Yesu Kristo.\nS: Sifa kwako Ee Kristo."
+        else -> null
+    }
 }
