@@ -20,7 +20,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.asAndroidBitmap
-import androidx.compose.ui.graphics.layer.rememberGraphicsLayer
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -64,8 +65,10 @@ fun ShareCardDialog(
         ) {
             Box(
                 Modifier.drawWithContent {
+                    // Record content into the layer for later capture, and composite the layer
+                    // itself onto screen (rather than drawing the composable's content twice).
                     graphicsLayer.record { this@drawWithContent.drawContent() }
-                    drawContent()
+                    drawLayer(graphicsLayer)
                 }
             ) {
                 LiturgicalCard(
