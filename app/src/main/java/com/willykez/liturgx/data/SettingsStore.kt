@@ -35,4 +35,18 @@ class SettingsStore(context: Context) {
         }
         prefs.edit().putString("theme_mode", value).apply()
     }
+
+    fun loadReminderEnabled(): Boolean = prefs.getBoolean("reminder_enabled", false)
+
+    fun saveReminderEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("reminder_enabled", enabled).apply()
+    }
+
+    /** Defaults to 5:00 AM -- matches the "Today's Gospel is ready" framing this feature was built around. */
+    fun loadReminderTime(): Pair<Int, Int> =
+        prefs.getInt("reminder_hour", 5) to prefs.getInt("reminder_minute", 0)
+
+    fun saveReminderTime(hour: Int, minute: Int) {
+        prefs.edit().putInt("reminder_hour", hour).putInt("reminder_minute", minute).apply()
+    }
 }

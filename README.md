@@ -95,3 +95,27 @@ with the standard Mass-reading responses.
 
 `assets/database/bible_swahili.sqlite` ships alongside the lectionary DB and is copied to
 app-internal storage on first use, read-only from then on.
+
+## Daily reminder, streaks, and image sharing
+
+**Daily reminder** (`notifications/`): an inexact `AlarmManager.setAndAllowWhileIdle` alarm,
+deliberately not an exact alarm — a devotional nudge firing a few minutes late is fine, and it
+means no `SCHEDULE_EXACT_ALARM` permission prompt. `ReadingReminderReceiver` shows the
+notification (today's Gospel citation, or the day's title if there's no Gospel) and immediately
+re-arms itself for tomorrow, since inexact alarms fire once and don't repeat on their own.
+`BootReceiver` re-arms after a reboot. Toggled from Settings, which handles the Android 13+
+`POST_NOTIFICATIONS` runtime permission request inline.
+
+**Streaks** (`data/ProgressStore.kt`, `ui/components/StreakCard.kt`): `HomeScreen` records
+today's date to a plain SharedPreferences string set every time it's shown — Home only ever
+shows *today*, so "viewed Home" and "opened today's reading" are the same event. Shown only on
+Home, not Kalenda, since a streak is about today's habit, not whichever date you're browsing.
+
+**Share as image** (`ui/components/LiturgicalCard.kt`, `ShareCardDialog.kt`,
+`data/sharing/ImageShareUtils.kt`): each `ReadingBlock` can render itself as a shareable card
+(open-missal palette, not a generic template) via `rememberGraphicsLayer()`, previewed in a
+dialog before sharing through a `FileProvider` content:// URI.
+
+**Launcher icon**: an open book with a cross rising from the spine and a ribbon bookmark,
+replacing the previous abstract flame shape — reads as "Scripture app" at a glance, verified
+against adaptive-icon mask cropping and at 48dp.

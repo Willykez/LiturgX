@@ -1,5 +1,11 @@
 package com.willykez.liturgx.ui.settings
 
+import android.Manifest
+import android.app.TimePickerDialog
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -11,7 +17,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.willykez.liturgx.core.EpiphanyMode
 import com.willykez.liturgx.core.LiturgicalColor
 import com.willykez.liturgx.core.RegionSettings
@@ -24,12 +32,22 @@ fun SettingsScreen(
     region: RegionSettings,
     themeMode: ThemeMode,
     currentColor: LiturgicalColor,
+    reminderEnabled: Boolean,
+    reminderHour: Int,
+    reminderMinute: Int,
     onRegionChange: (RegionSettings) -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
+    onReminderEnabledChange: (Boolean) -> Unit,
+    onReminderTimeChange: (Int, Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val onBg = MaterialTheme.colorScheme.onBackground
     val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
+    val context = LocalContext.current
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> onReminderEnabledChange(granted) }
 
     Box(modifier.fillMaxSize()) {
         SeasonBackdrop(currentColor)
@@ -46,6 +64,65 @@ fun SettingsScreen(
                 color = onBgDim
             )
             Spacer(Modifier.height(20.dp))
+
+            SettingCard(
+                title = "Kikumbusho cha Kila Siku",
+                description = "Pokea arifa kila siku pindi masomo ya Kiliturujia ya siku hiyo yanapokuwa tayari.",
+                color = currentColor
+            ) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Washa Kikumbusho", color = onBg, style = MaterialTheme.typography.bodyMedium)
+                    Switch(
+                        checked = reminderEnabled,
+                        onCheckedChange = { checked ->
+                            if (checked && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                val hasPermission = ContextCompat.checkSelfPermission(
+                                    context, Manifest.permission.POST_NOTIFICATIONS
+                                ) == PackageManager.PERMISSION_GRANTED
+                                if (hasPermission) {
+                                    onReminderEnabledChange(true)
+                                } else {
+                                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                }
+                            } else {
+                                onReminderEnabledChange(checked)
+                            }
+                        }
+                    )
+                }
+
+                if (reminderEnabled) {
+                    Spacer(Modifier.height(10.dp))
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Muda: %02d:%02d".format(reminderHour, reminderMinute),
+                            color = onBg,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        TextButton(onClick = {
+                            TimePickerDialog(
+                                context,
+                                { _, h, m -> onReminderTimeChange(h, m) },
+                                reminderHour,
+                                reminderMinute,
+                                true
+                            ).show()
+                        }) {
+                            Text("Badilisha Muda")
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(14.dp))
 
             SettingCard(
                 title = "Mwonekano",

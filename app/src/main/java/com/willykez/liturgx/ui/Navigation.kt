@@ -112,8 +112,13 @@ fun LiturgXApp() {
                         region = vm.region,
                         themeMode = vm.themeMode,
                         currentColor = vm.selectedResult.resolved.color,
+                        reminderEnabled = vm.reminderEnabled,
+                        reminderHour = vm.reminderHour,
+                        reminderMinute = vm.reminderMinute,
                         onRegionChange = { vm.updateRegion(it) },
-                        onThemeModeChange = { vm.updateThemeMode(it) }
+                        onThemeModeChange = { vm.updateThemeMode(it) },
+                        onReminderEnabledChange = { vm.updateReminderEnabled(it) },
+                        onReminderTimeChange = { h, m -> vm.updateReminderTime(h, m) }
                     )
                 }
             }

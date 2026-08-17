@@ -1,16 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  An open book (the Lectionary/Missal) with a cross rising from its spine, and a ribbon
+  marker on the right page: the daily-reading bookmark, made literal. Replaces the
+  previous abstract flame shape with something that reads as "Scripture app" at a glance.
+  All content stays within x:[27,81] y:[26,83], inside the ~66dp adaptive-icon safe zone
+  (roughly [21,87] on both axes) so it survives circular, squircle, and rounded-square masks.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
+
+    <!-- Left page -->
     <path
         android:fillColor="#F6EFE1"
-        android:pathData="M54,26 C60,36 66,42 66,52 C66,61.4 60.6,68 54,68 C47.4,68 42,61.4 42,52 C42,42 48,36 54,26 Z" />
+        android:pathData="M54,50 L54,78 L29,83 L32,54 Z" />
+
+    <!-- Right page -->
+    <path
+        android:fillColor="#F6EFE1"
+        android:pathData="M54,50 L54,78 L79,83 L76,54 Z" />
+
+    <!-- Spine -->
     <path
         android:fillColor="#C9A227"
-        android:pathData="M54,38 C57,44 60,47 60,53 C60,58.5 57.3,62 54,62 C50.7,62 48,58.5 48,53 C48,47 51,44 54,38 Z" />
+        android:pathData="M52,48 L56,48 L56,80 L52,80 Z" />
+
+    <!-- Ribbon marker on the right page -->
     <path
-        android:fillColor="#F6EFE1"
-        android:pathData="M40,74 L68,74 L68,80 L40,80 Z" />
+        android:fillColor="#C9A227"
+        android:fillAlpha="0.85"
+        android:pathData="M72,55 L76,55 L76,72 L74,69 L72,72 Z" />
+
+    <!-- Cross rising from the spine -->
     <path
-        android:fillColor="#F6EFE1"
-        android:pathData="M34,82 L74,82 L74,88 L34,88 Z" />
+        android:fillColor="#C9A227"
+        android:pathData="M51,26 L57,26 L57,48 L51,48 Z" />
+    <path
+        android:fillColor="#C9A227"
+        android:pathData="M44,32 L64,32 L64,38 L44,38 Z" />
 </vector>

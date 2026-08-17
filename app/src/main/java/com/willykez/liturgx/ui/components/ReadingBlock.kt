@@ -60,6 +60,8 @@ fun ReadingBlock(
     kind: ReadingKind,
     citation: String,
     color: LiturgicalColor,
+    dateText: String,
+    seasonLabel: String,
     label: String? = null
 ) {
     val accent = seasonAccent(color)
@@ -73,6 +75,7 @@ fun ReadingBlock(
     var copied by remember(citation) { mutableStateOf(false) }
     var resolveState by remember(citation) { mutableStateOf(ResolveState.IDLE) }
     var passage by remember(citation) { mutableStateOf<BiblePassage?>(null) }
+    var showShareCard by remember(citation) { mutableStateOf(false) }
 
     fun resolveIfNeeded() {
         if (resolveState != ResolveState.IDLE) return
@@ -140,6 +143,17 @@ fun ReadingBlock(
                     modifier = Modifier.size(16.dp)
                 )
             }
+            IconButton(onClick = {
+                resolveIfNeeded()
+                showShareCard = true
+            }, modifier = Modifier.size(28.dp)) {
+                Icon(
+                    Icons.Filled.Image,
+                    contentDescription = "Shiriki kama picha",
+                    tint = onBgDim,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
         }
 
         AnimatedVisibility(
@@ -155,6 +169,24 @@ fun ReadingBlock(
                 Text(text, style = MaterialTheme.typography.bodyLarge, color = onBg)
             }
         }
+    }
+
+    if (showShareCard) {
+        val response = when (kind) {
+            ReadingKind.SOMO_LA_KWANZA, ReadingKind.SOMO_LA_PILI -> "Neno la Bwana.\nS: Tumshukuru Mungu."
+            ReadingKind.INJILI -> "Injili ya Bwana Yesu Kristo.\nS: Sifa kwako Ee Kristo."
+            else -> null
+        }
+        ShareCardDialog(
+            dateText = dateText,
+            seasonText = seasonLabel,
+            kindLabel = label ?: kind.label,
+            citation = citation,
+            passage = passage?.renderedText() ?: citation,
+            responseText = response,
+            liturgicalColor = color,
+            onDismiss = { showShareCard = false }
+        )
     }
 }
 

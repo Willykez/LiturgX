@@ -9,6 +9,7 @@ import com.willykez.liturgx.core.RegionSettings
 import com.willykez.liturgx.data.DayResult
 import com.willykez.liturgx.data.LectionaryRepository
 import com.willykez.liturgx.data.SettingsStore
+import com.willykez.liturgx.notifications.ReminderScheduler
 import com.willykez.liturgx.ui.theme.ThemeMode
 import java.time.LocalDate
 
@@ -21,6 +22,15 @@ class LectionaryViewModel(app: Application) : AndroidViewModel(app) {
         private set
 
     var themeMode by mutableStateOf(settingsStore.loadThemeMode())
+        private set
+
+    var reminderEnabled by mutableStateOf(settingsStore.loadReminderEnabled())
+        private set
+
+    var reminderHour by mutableStateOf(settingsStore.loadReminderTime().first)
+        private set
+
+    var reminderMinute by mutableStateOf(settingsStore.loadReminderTime().second)
         private set
 
     var today by mutableStateOf(LocalDate.now())
@@ -53,6 +63,27 @@ class LectionaryViewModel(app: Application) : AndroidViewModel(app) {
     fun updateThemeMode(mode: ThemeMode) {
         themeMode = mode
         settingsStore.saveThemeMode(mode)
+    }
+
+    /** The permission dance (Android 13+ POST_NOTIFICATIONS) happens in SettingsScreen, which
+     *  only calls this once it's actually granted -- this function assumes it's safe to schedule. */
+    fun updateReminderEnabled(enabled: Boolean) {
+        reminderEnabled = enabled
+        settingsStore.saveReminderEnabled(enabled)
+        if (enabled) {
+            ReminderScheduler.schedule(getApplication(), reminderHour, reminderMinute)
+        } else {
+            ReminderScheduler.cancel(getApplication())
+        }
+    }
+
+    fun updateReminderTime(hour: Int, minute: Int) {
+        reminderHour = hour
+        reminderMinute = minute
+        settingsStore.saveReminderTime(hour, minute)
+        if (reminderEnabled) {
+            ReminderScheduler.schedule(getApplication(), hour, minute)
+        }
     }
 
     private fun refreshAll() {

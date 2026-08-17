@@ -1,7 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Night-vestment purple, same base as the in-app dark theme (Theme.kt DarkBackground /
+  seasonAccent-neutral), so the launcher icon reads as "this app" regardless of which
+  liturgical colour is active inside on any given day.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
     <path android:fillColor="#120F1A" android:pathData="M0,0h108v108h-108z" />
-    <path android:fillColor="#5B3A8E" android:fillAlpha="0.35"
-        android:pathData="M108,0 A54,54 0 0 1 54,54 A54,54 0 0 1 0,0 Z" />
+    <!-- soft upper glow -->
+    <path android:fillColor="#5B3A8E" android:fillAlpha="0.40"
+        android:pathData="M108,0 A58,58 0 0 1 50,58 A58,58 0 0 1 0,0 Z" />
+    <!-- faint warm glow low-centre, behind where the book sits -->
+    <path android:fillColor="#C9A227" android:fillAlpha="0.10"
+        android:pathData="M54,96 A34,34 0 0 1 20,62 A34,34 0 0 1 54,96 Z" />
 </vector>

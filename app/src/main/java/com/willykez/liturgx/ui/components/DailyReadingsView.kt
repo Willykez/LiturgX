@@ -44,6 +44,7 @@ fun DailyReadingsView(
     onPrevDay: () -> Unit = {},
     onNextDay: () -> Unit = {},
     onJumpToToday: () -> Unit = {},
+    extraHeaderContent: (@Composable () -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val resolved = dayResult.resolved
@@ -154,11 +155,17 @@ fun DailyReadingsView(
             }
         }
 
+        extraHeaderContent?.let { content ->
+            item { content() }
+        }
+
         items(items) { item ->
             ReadingBlock(
                 kind = kindFor(item.kindKey),
                 citation = item.citation,
                 color = resolved.color,
+                dateText = dateLine,
+                seasonLabel = resolved.overridingSaint?.jina ?: resolved.label,
                 label = item.label
             )
         }
