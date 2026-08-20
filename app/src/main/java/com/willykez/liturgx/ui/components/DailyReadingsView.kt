@@ -5,13 +5,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.TextSnippet
-import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -26,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import com.willykez.liturgx.core.ReadingPresenter
+import com.willykez.liturgx.core.SwahiliDate
 import com.willykez.liturgx.data.DayResult
 import com.willykez.liturgx.data.bible.BibleRepository
 import com.willykez.liturgx.data.sharing.DailyReadingPdfGenerator
@@ -36,21 +34,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private val swMonths = listOf(
-    "Januari", "Februari", "Machi", "Aprili", "Mei", "Juni",
-    "Julai", "Agosti", "Septemba", "Oktoba", "Novemba", "Desemba"
-)
-private val swWeekdays = listOf("Jumatatu", "Jumanne", "Jumatano", "Alhamisi", "Ijumaa", "Jumamosi", "Jumapili")
-
 private enum class SharePreparing { NONE, TEXT, PDF }
 
 @Composable
 fun DailyReadingsView(
     dayResult: DayResult,
-    showDateNav: Boolean = false,
-    onPrevDay: () -> Unit = {},
-    onNextDay: () -> Unit = {},
-    onJumpToToday: () -> Unit = {},
     extraHeaderContent: (@Composable () -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -59,7 +47,7 @@ fun DailyReadingsView(
     val onBg = MaterialTheme.colorScheme.onBackground
     val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
     val d = resolved.date
-    val dateLine = "${swWeekdays[d.dayOfWeek.value - 1]}, ${d.dayOfMonth} ${swMonths[d.monthValue - 1]} ${d.year}"
+    val dateLine = "${SwahiliDate.weekdayName(d.dayOfWeek)}, ${d.dayOfMonth} ${SwahiliDate.monthName(d.monthValue)} ${d.year}"
     val seasonLabel = resolved.overridingSaint?.jina ?: resolved.label
 
     val context = LocalContext.current
@@ -137,22 +125,7 @@ fun DailyReadingsView(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (showDateNav) {
-                        IconButton(onClick = onPrevDay) {
-                            Icon(Icons.Filled.ChevronLeft, contentDescription = "Siku iliyopita", tint = onBg)
-                        }
-                        TextButton(onClick = onJumpToToday) {
-                            Icon(Icons.Filled.Today, contentDescription = null, tint = accent, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("Leo", color = accent, style = MaterialTheme.typography.labelLarge)
-                        }
-                        IconButton(onClick = onNextDay) {
-                            Icon(Icons.Filled.ChevronRight, contentDescription = "Siku ijayo", tint = onBg)
-                        }
-                        Spacer(Modifier.weight(1f))
-                    } else {
-                        Spacer(Modifier.weight(1f))
-                    }
+                    Spacer(Modifier.weight(1f))
                     Box {
                         IconButton(onClick = { showShareMenu = true }, enabled = preparing == SharePreparing.NONE) {
                             if (preparing != SharePreparing.NONE) {

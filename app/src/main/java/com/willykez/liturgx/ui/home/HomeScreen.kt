@@ -34,7 +34,6 @@ fun HomeScreen(todayResult: DayResult, modifier: Modifier = Modifier) {
         SeasonBackdrop(todayResult.resolved.color)
         DailyReadingsView(
             dayResult = todayResult,
-            showDateNav = false,
             extraHeaderContent = {
                 StreakCard(
                     openedDates = openedDates,

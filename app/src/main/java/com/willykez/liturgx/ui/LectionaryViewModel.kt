@@ -50,8 +50,6 @@ class LectionaryViewModel(app: Application) : AndroidViewModel(app) {
         selectedResult = repository.getForDate(date, region)
     }
 
-    fun nextDay() = goToDate(selectedDate.plusDays(1))
-    fun prevDay() = goToDate(selectedDate.minusDays(1))
     fun jumpToToday() = goToDate(today)
 
     fun updateRegion(newRegion: RegionSettings) {

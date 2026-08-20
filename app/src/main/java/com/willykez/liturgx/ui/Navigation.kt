@@ -101,9 +101,8 @@ fun LiturgXApp() {
                 composable(Dest.Kalenda.route) {
                     CalendarScreen(
                         selectedResult = vm.selectedResult,
+                        region = vm.region,
                         onSelectDate = { vm.goToDate(it) },
-                        onPrevDay = { vm.prevDay() },
-                        onNextDay = { vm.nextDay() },
                         onJumpToToday = { vm.jumpToToday() }
                     )
                 }

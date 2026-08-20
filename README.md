@@ -189,3 +189,39 @@ lectionary DB store an annotation instead of a real citation for the Gospel Accl
 genuinely unspecified or replaced by a named hymn. These are now filtered out in `present()`
 itself, so every consumer (on-screen cards, plain-text share, image cards, PDF) benefits from
 the one fix instead of each needing its own special-case check.
+
+## A real visual calendar (`ui/calendar/`)
+
+Kalenda replaced its `DatePickerDialog`-only picker with a month-grid calendar modeled on the
+platform Calendar app: Sunday-first grid, ISO week-number gutter, swipe left/right between
+months via `HorizontalPager`, today/selected/notable-day markers, and the tapped day's full
+readings docked below it. `DatePickerDialog` is kept as a secondary "jump to a specific date"
+shortcut (swiping month-by-month to a date a year away isn't practical), reachable via a small
+icon next to the month header.
+
+`MonthGrid.kt` always renders exactly 6 week-rows regardless of how many a given month actually
+needs (4-6), so swiping between months never jumps in height. The small dot under a day marks a
+"notable day" (a named saint/feast overriding the plain weekday reading, or an optional memorial
+offered alongside it) -- up to 42 real lectionary lookups per visible month page, computed off
+the main thread via `produceState` so swiping can't stutter waiting on them; the dots fill in a
+frame or two after the page appears instead of blocking it.
+
+`DailyReadingsView`'s old `showDateNav`/prev-next-day chevron mode is gone -- once Home and
+Kalenda both stopped using it (Kalenda tapping a day directly makes day-by-day chevrons
+redundant), it was dead code with no remaining caller, so it came out along with the
+now-unused `ViewModel.nextDay()`/`prevDay()` it depended on. `SwahiliDate` gained shared
+`monthName()`/`weekdayName()` functions so the calendar header, day-agenda headline, and month
+grid all pull from one source instead of three separately-maintained name lists.
+
+## Next up (not built yet)
+
+A more complete lectionary dataset was supplied for a future version -- data-driven precedence
+via a `daraja_precedence` table instead of hardcoded Kotlin rules, saint biographies, Preface
+names/occasions, and an extended year-cycle table -- documented in the bundle's own
+`APP_LOGIC.md`. Migrating to it is a real data-model change (new tables, a precedence-rank
+comparison replacing the current if-chain in the season/period resolvers) and deliberately
+wasn't started this round.
+
+Also flagged, not yet built: book/testament-scoped Bible search, reading plans (the schema already
+anticipates `plans`/`reading_days`/`reading_plans` tables), a rotating Verse of the Day, a
+scheduled verse notification, share-a-verse, and TTS read-aloud.
