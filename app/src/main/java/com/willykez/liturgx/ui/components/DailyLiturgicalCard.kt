@@ -73,12 +73,23 @@ fun DailyLiturgicalCard(
             HorizontalDivider(color = inkDim.copy(alpha = 0.2f))
             Spacer(Modifier.height(16.dp))
 
-            Text(
-                "${reading.kindLabel.uppercase()}: ${reading.citation}",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = accent
-            )
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                Text(
+                    reading.kindLabel.uppercase(),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = accent
+                )
+                Text(
+                    reading.citation,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = inkDim
+                )
+            }
             Spacer(Modifier.height(10.dp))
             Text(
                 reading.passageText,

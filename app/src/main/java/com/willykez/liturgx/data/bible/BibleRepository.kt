@@ -11,9 +11,10 @@ import kotlin.math.abs
  *
  * [startsNewRange] is true for the first verse of a new comma/semicolon-separated citation group
  * (e.g. each of "2-3", "4-5", "6-7", "8-9" in a Psalm citation is its own group) — this is what
- * lets the UI tell a genuine new "stanza" apart from just the next verse in a continuous passage.
- * [hasGapBeforeIt] is true when that new group doesn't pick up immediately after the previous
- * one (a verse or more was skipped, e.g. the "11" in "6-8,9,11-13") — see [BiblePassage.renderedText].
+ * lets the UI tell a genuine new "paragraph" apart from just the next verse in a continuous
+ * passage. Every such boundary becomes a paragraph break in [BiblePassage.renderedText], the
+ * same way a Bible naturally paragraphs at a new thought rather than stitching split-apart
+ * citation groups into one run-on block with a "skipped text" marker in the middle of it.
  * [isPoetic] mirrors whether this verse is laid out as poetry in the source text (the bundled
  * Bible marks Psalms and poetic oracles with internal line breaks) — also used for rendering.
  * [part] is which portion of the verse the citation asked for — see [VersePart].
@@ -23,7 +24,6 @@ data class BibleVerse(
     val verse: Int,
     val text: String,
     val startsNewRange: Boolean,
-    val hasGapBeforeIt: Boolean = false,
     val isPoetic: Boolean = false,
     val part: VersePart = VersePart.ALL
 )
@@ -35,34 +35,40 @@ data class BiblePassage(
     val hasGaps: Boolean
 ) {
     /**
-     * The passage stitched into one readable block, the way a Missal would set it:
-     *  - Poetic verses (Psalms, poetic oracles) render one line per verse, with a blank line
-     *    between citation groups — each comma-separated group in the citation is its own stanza,
-     *    whether or not the verse numbers are actually contiguous (a Psalm citation like
-     *    "2-3, 4-5, 6-7, 8-9" is four sung strophes, not one skipped verse).
-     *  - Prose verses (Gospel/Epistle/OT narrative) flow as a continuous paragraph; a genuine
-     *    skip in the verse numbers (e.g. "31-35, 37-39") shows as a visible "[…]" break instead
-     *    of silently disappearing.
+     * The passage stitched into one readable block, the way a Bible naturally paragraphs:
+     *  - Poetic verses (Psalms, poetic oracles) render one line per verse.
+     *  - Every citation-group boundary (each comma-separated part of the citation) starts a new
+     *    paragraph, whether or not the verse numbers are actually contiguous — a skipped verse
+     *    or two doesn't get called out with a marker; it's just where one paragraph ends and the
+     *    next begins, the same way a printed Bible doesn't visibly flag its own paragraphing.
+     *  - Within a prose paragraph, [ScriptureLineBreaker] breaks each sentence onto its own
+     *    line — a lighter version of the "sense line" layout printed lectionaries use, built
+     *    from real sentence punctuation rather than the true editorial sense-line data (which
+     *    this database doesn't carry for prose books).
      */
     fun renderedText(): String {
         if (verses.isEmpty()) return ""
-        val sb = StringBuilder()
-        verses.forEachIndexed { index, v ->
-            if (index == 0) {
-                sb.append(v.text)
-                return@forEachIndexed
+
+        val paragraphs = mutableListOf<StringBuilder>()
+        var paragraphIsPoetic = false
+        verses.forEach { v ->
+            if (v.startsNewRange || paragraphs.isEmpty()) {
+                paragraphs += StringBuilder(v.text)
+                paragraphIsPoetic = v.isPoetic
+            } else {
+                val current = paragraphs.last()
+                current.append(if (v.isPoetic || paragraphIsPoetic) '\n' else ' ')
+                current.append(v.text)
+                if (v.isPoetic) paragraphIsPoetic = true
             }
-            val prev = verses[index - 1]
-            when {
-                v.startsNewRange && (v.isPoetic || prev.isPoetic) -> sb.append("\n\n")
-                v.startsNewRange && v.hasGapBeforeIt -> sb.append("\n[…]\n")
-                v.startsNewRange -> sb.append(if (v.isPoetic || prev.isPoetic) "\n" else " ")
-                v.isPoetic || prev.isPoetic -> sb.append("\n")
-                else -> sb.append(' ')
-            }
-            sb.append(v.text)
         }
-        return sb.toString()
+
+        return paragraphs.joinToString("\n\n") { paragraph ->
+            val text = paragraph.toString()
+            // Already poetic (contains its own internal line breaks) -- leave the source's own
+            // line structure alone rather than layering sentence-breaking on top of it.
+            if (text.contains('\n')) text else ScriptureLineBreaker.toSenseLines(text)
+        }
     }
 }
 
@@ -87,8 +93,6 @@ class BibleRepository(private val context: Context) {
 
         val db = BibleDatabaseHelper.getDatabase(context)
         val verses = mutableListOf<BibleVerse>()
-        var previousChapter: Int? = null
-        var previousVerse: Int? = null
 
         parsed.ranges.forEach { range ->
             val verseNumbers = range.verses().toList()
@@ -104,23 +108,16 @@ class BibleRepository(private val context: Context) {
                 val isPoetic = rawText.contains('\n')
                 val displayText = splitVersePart(rawText, part)
 
-                val startsNewRange = i == 0
-                val hasGap = previousChapter != null &&
-                    !(range.chapter == previousChapter && verseNum == previousVerse!! + 1)
-
                 verses.add(
                     BibleVerse(
                         chapter = range.chapter,
                         verse = verseNum,
                         text = displayText,
-                        startsNewRange = startsNewRange,
-                        hasGapBeforeIt = startsNewRange && hasGap,
+                        startsNewRange = i == 0,
                         isPoetic = isPoetic,
                         part = part
                     )
                 )
-                previousChapter = range.chapter
-                previousVerse = verseNum
             }
         }
 

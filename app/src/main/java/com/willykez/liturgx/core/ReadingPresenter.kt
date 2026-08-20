@@ -23,7 +23,7 @@ object ReadingPresenter {
                     r.somoLaKwanza?.let { items += ReadingItem("SOMO_LA_KWANZA", "Somo la Kwanza", it) }
                     r.wimboLaKatikati?.let { items += ReadingItem("WIMBO", "Wimbo wa Katikati", it) }
                     r.somoLaPili?.let { items += ReadingItem("SOMO_LA_PILI", "Somo la Pili", it) }
-                    r.shangilio?.let { items += ReadingItem("SHANGILIO", "Shangilio", it) }
+                    r.shangilio?.takeIf(::isRealCitation)?.let { items += ReadingItem("SHANGILIO", "Shangilio", it) }
                     r.injili?.let { items += ReadingItem("INJILI", "Injili ya Misa (Simulizi la Mateso)", it) }
                 }
                 entry == "vigilia" -> {
@@ -48,9 +48,20 @@ object ReadingPresenter {
         if (!skipFirst) r.somoLaKwanza?.let { items += ReadingItem("SOMO_LA_KWANZA", "Somo la Kwanza", it) }
         r.wimboLaKatikati?.let { items += ReadingItem("WIMBO", "Wimbo wa Katikati", it) }
         r.somoLaPili?.let { items += ReadingItem("SOMO_LA_PILI", "Somo la Pili", it) }
-        r.shangilio?.let { items += ReadingItem("SHANGILIO", "Shangilio", it) }
+        r.shangilio?.takeIf(::isRealCitation)?.let { items += ReadingItem("SHANGILIO", "Shangilio", it) }
         r.injili?.let { items += ReadingItem("INJILI", "Injili", it) }
     }
+
+    /**
+     * 29 rows in the lectionary DB store an annotation in `shangilio` instead of an actual
+     * citation: "[hakuna mstari maalum]" ("no specific verse"), "[Angalia Te Deum]", etc.,
+     * for days where the Gospel Acclamation verse is genuinely unspecified or replaced by a
+     * named hymn. A bracket-wrapped value like that isn't a citation Verse Part could ever
+     * parse, and showing it as a reading card / share-text section with empty body text under
+     * it is worse than just omitting the line, so it's filtered out here, once, for every
+     * consumer (`present()` feeds the UI, plain-text share, image cards, and the PDF alike).
+     */
+    private fun isRealCitation(value: String): Boolean = value.isNotBlank() && !value.trimStart().startsWith("[")
 
     /**
      * The standard spoken Mass response after a reading, keyed by [ReadingItem.kindKey].

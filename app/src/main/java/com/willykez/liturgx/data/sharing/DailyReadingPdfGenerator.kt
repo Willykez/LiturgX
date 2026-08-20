@@ -60,8 +60,10 @@ object DailyReadingPdfGenerator {
         cursor.advance(18)
 
         readings.forEachIndexed { index, reading ->
-            cursor.drawText("${reading.kindLabel.uppercase()}: ${reading.citation}", headingPaint(color))
-            cursor.advance(10)
+            cursor.drawHeaderRow(reading.kindLabel.uppercase(), reading.citation, headingPaint(color), citationPaint(INK_DIM))
+            cursor.advance(8)
+            cursor.drawDivider()
+            cursor.advance(14)
             cursor.drawWrapped(reading.passageText, bodyPaint())
             reading.responseText?.let { response ->
                 cursor.advance(8)
@@ -70,9 +72,7 @@ object DailyReadingPdfGenerator {
                 }
             }
             if (index != readings.lastIndex) {
-                cursor.advance(18)
-                cursor.drawDivider()
-                cursor.advance(18)
+                cursor.advance(22)
             }
         }
 
@@ -94,9 +94,16 @@ object DailyReadingPdfGenerator {
     }
 
     private fun headingPaint(color: LiturgicalColor) = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-        textSize = 13f
+        textSize = 12f
         this.color = color.hex.toInt()
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        letterSpacing = 0.03f
+    }
+
+    private fun citationPaint(textColor: Int) = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = 11f
+        color = textColor
+        typeface = Typeface.DEFAULT
     }
 
     private fun bodyPaint() = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -165,6 +172,35 @@ object DailyReadingPdfGenerator {
 
         fun drawText(text: String, paint: TextPaint, alignEnd: Boolean = false) {
             drawWrapped(text, paint, alignEnd)
+        }
+
+        /**
+         * Label left, citation right, on one baseline -- the same "Reading 1 ... Ephesians
+         * 3:14-19" row a printed lectionary uses. Falls back to stacking the two lines when
+         * they wouldn't both fit on one line (a long label like "SOMO LA KWANZA (CHAGUO KUU)"
+         * next to a long citation like "1 Mambo ya Nyakati 15:3-4, 15-16; 16:1-2" genuinely can
+         * overflow the content width and overlap if forced onto one line regardless).
+         */
+        fun drawHeaderRow(label: String, citation: String, labelPaint: TextPaint, citationPaint: TextPaint) {
+            val gap = 12f
+            val labelWidth = labelPaint.measureText(label)
+            val citationWidth = citationPaint.measureText(citation)
+
+            if (labelWidth + gap + citationWidth <= CONTENT_WIDTH) {
+                val lineHeight = kotlin.math.ceil(labelPaint.descent() - labelPaint.ascent()).toInt()
+                ensureSpace(lineHeight)
+                val c = canvas
+                if (c != null) {
+                    val baseline = y - labelPaint.ascent()
+                    c.drawText(label, MARGIN.toFloat(), baseline, labelPaint)
+                    c.drawText(citation, (PAGE_WIDTH - MARGIN) - citationWidth, baseline, citationPaint)
+                }
+                y += lineHeight
+            } else {
+                drawWrapped(label, labelPaint)
+                advance(2)
+                drawWrapped(citation, citationPaint)
+            }
         }
 
         /**

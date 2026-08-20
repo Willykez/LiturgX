@@ -148,3 +148,44 @@ via `android.graphics.pdf.PdfDocument` + `StaticLayout`. The pagination is line-
 per-block "does it fit" guess — a single long reading can and does split mid-paragraph across a
 page boundary at the correct line, the way a word processor would, rather than overflowing the
 page or wasting the remaining space on it.
+
+## Save-to-device, no more "[…]" markers, and a lectionary-style header
+
+**Save, not just share** (`data/sharing/MediaStoreSaver.kt`, `ui/components/ImageSaveShareButtons.kt`,
+`PdfPreviewDialog.kt`): every image card and the PDF now has a Save action next to Share, writing
+to Pictures/LiturgX or Downloads/LiturgX. Branches on API level — scoped storage (29+) via
+`MediaStore` + `RELATIVE_PATH`/`IS_PENDING`, versus a direct file write into the legacy public
+directory (26-28, this app's `minSdk`) behind a runtime `WRITE_EXTERNAL_STORAGE` request, since
+those two eras of Android genuinely need different APIs, not just different permissions. The PDF
+gets its own preview dialog first — first page rasterized via `PdfRenderer` — before either action.
+
+**Paragraphs instead of "[…]"** (`data/bible/BibleRepository.kt`): a citation like
+"15:3-4, 15-16; 16:1-2" now renders as three paragraphs, blank-line separated, the way a Bible
+naturally paragraphs at a new thought — no visible marker calling out that verses were skipped.
+Every comma-separated citation group is its own paragraph unconditionally now, whether or not
+it's poetic and whether or not the verse numbers are actually contiguous.
+
+**Sentence-per-line prose** (`data/bible/ScriptureLineBreaker.kt`): within a paragraph, prose
+now breaks one sentence per line — a deliberately conservative approximation of the "sense line"
+layout printed lectionaries use (each clause read as its own line). It's an approximation, not a
+reproduction: real lectionary sense-lines are specific editorial typesetting choices baked into
+how a given translation was laid out, and this database carries no such markup for prose books —
+only Psalms and poetic oracles have real internal line breaks. This breaks only at sentence-ending
+punctuation (`. ! ? ;`), never at commas, so it can't fragment a clause mid-thought.
+
+**Lectionary-style header row**: `LiturgicalCard`, `DailyLiturgicalCard`, and the PDF now show
+the reading label left / citation right on one line with a rule underneath, matching how USCCB's
+own lectionary page lays a reading out. The PDF version falls back to stacking the two lines
+when they're both too long to fit on one (checked against actual measured text width, not
+guessed) — a real risk with citations like "1 Mambo ya Nyakati 15:3-4, 15-16; 16:1-2" next to a
+label like "SOMO LA KWANZA (CHAGUO KUU)". The on-screen `ReadingBlock` keeps its stacked layout
+instead of the same row treatment — it has action icons competing for width that USCCB's static
+webpage never has to share space with, so forcing the row there risked real overflow on longer
+citations; it gets a refined eyebrow-label treatment instead.
+
+**Placeholder readings filtered at the source** (`core/ReadingPresenter.kt`): 29 rows in the
+lectionary DB store an annotation instead of a real citation for the Gospel Acclamation --
+"[hakuna mstari maalum]" ("no specific verse"), "[Angalia Te Deum]", etc., for days where it's
+genuinely unspecified or replaced by a named hymn. These are now filtered out in `present()`
+itself, so every consumer (on-screen cards, plain-text share, image cards, PDF) benefits from
+the one fix instead of each needing its own special-case check.

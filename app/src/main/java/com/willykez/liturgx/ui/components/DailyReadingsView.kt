@@ -31,7 +31,6 @@ import com.willykez.liturgx.data.bible.BibleRepository
 import com.willykez.liturgx.data.sharing.DailyReadingPdfGenerator
 import com.willykez.liturgx.data.sharing.DailyReadingShareFormatter
 import com.willykez.liturgx.data.sharing.DayCardReading
-import com.willykez.liturgx.data.sharing.PdfShareUtils
 import com.willykez.liturgx.ui.theme.seasonAccent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -70,6 +69,8 @@ fun DailyReadingsView(
     var showShareMenu by remember(dayResult) { mutableStateOf(false) }
     var showImageCard by remember(dayResult) { mutableStateOf(false) }
     var dayCardReadings by remember(dayResult) { mutableStateOf<List<DayCardReading>?>(null) }
+    var pdfFile by remember(dayResult) { mutableStateOf<java.io.File?>(null) }
+    var showPdfPreview by remember(dayResult) { mutableStateOf(false) }
     val items = ReadingPresenter.present(dayResult.readings)
 
     suspend fun resolveDayCardReadings(): List<DayCardReading> =
@@ -119,7 +120,8 @@ fun DailyReadingsView(
                 DailyReadingPdfGenerator.generate(context, dateLine, seasonLabel, resolved.color, readings)
             }
             preparing = SharePreparing.NONE
-            PdfShareUtils.share(context, file)
+            pdfFile = file
+            showPdfPreview = true
         }
     }
 
@@ -254,6 +256,15 @@ fun DailyReadingsView(
             readings = cardReadings,
             liturgicalColor = resolved.color,
             onDismiss = { showImageCard = false }
+        )
+    }
+
+    val currentPdfFile = pdfFile
+    if (showPdfPreview && currentPdfFile != null) {
+        PdfPreviewDialog(
+            file = currentPdfFile,
+            color = resolved.color,
+            onDismiss = { showPdfPreview = false }
         )
     }
 }

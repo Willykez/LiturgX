@@ -26,7 +26,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.willykez.liturgx.core.LiturgicalColor
 import com.willykez.liturgx.core.ReadingPresenter
 import com.willykez.liturgx.data.bible.BiblePassage
@@ -106,8 +108,14 @@ fun ReadingBlock(
             Icon(kind.icon, contentDescription = null, tint = accent, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(label ?: kind.label, style = MaterialTheme.typography.titleSmall, color = accent)
-                Text(citation, style = MaterialTheme.typography.bodyLarge, color = onBg)
+                Text(
+                    (label ?: kind.label).uppercase(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = accent,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.8.sp
+                )
+                Text(citation, style = MaterialTheme.typography.titleMedium, color = onBg)
             }
             if (resolveState == ResolveState.LOADING) {
                 CircularProgressIndicator(

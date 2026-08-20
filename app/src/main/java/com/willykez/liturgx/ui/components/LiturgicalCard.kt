@@ -72,15 +72,27 @@ fun LiturgicalCard(
         HorizontalDivider(color = inkDim.copy(alpha = 0.25f))
         Spacer(Modifier.height(16.dp))
 
-        Text(
-            "${kindLabel.uppercase()}: $citation",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = ink
-        )
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom
+        ) {
+            Text(
+                kindLabel.uppercase(),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = ink
+            )
+            Text(
+                citation,
+                style = MaterialTheme.typography.bodyMedium,
+                color = inkDim
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        HorizontalDivider(color = inkDim.copy(alpha = 0.2f))
 
         Spacer(Modifier.height(14.dp))
-
         Text(
             passage,
             style = MaterialTheme.typography.bodyLarge.copy(
