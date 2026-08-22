@@ -57,14 +57,14 @@ fun MonthGrid(
     val onBg = MaterialTheme.colorScheme.onBackground
     val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
 
-    val notableDays by produceState(initialValue = emptySet<Int>(), month, region) {
+    val notableDays = produceState(initialValue = emptySet<Int>(), month, region) {
         value = withContext(Dispatchers.IO) {
             (1..month.lengthOfMonth()).filter { day ->
                 val result = repository.getForDate(month.atDay(day), region)
                 result.resolved.overridingSaint != null || result.optionalMemorial != null
             }.toSet()
         }
-    }
+    }.value
 
     val firstOfMonth = month.atDay(1)
     // Sunday-first column index: Sunday -> 0, Monday -> 1, ... Saturday -> 6.

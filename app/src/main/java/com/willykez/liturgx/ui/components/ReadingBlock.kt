@@ -3,6 +3,7 @@ package com.willykez.liturgx.ui.components
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -183,7 +184,18 @@ fun ReadingBlock(
                     Modifier
                         .clip(RoundedCornerShape(50))
                         .clickable {
-                            if (isReading) tts.stop() else tts.speak(citation, text)
+                            if (isReading) {
+                                tts.stop()
+                            } else {
+                                val started = tts.speak(citation, text)
+                                if (!started) {
+                                    Toast.makeText(
+                                        context,
+                                        "Kusoma kwa sauti hakupatikani kwa sasa kwenye kifaa hiki",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
                         }
                         .padding(vertical = 4.dp, horizontal = 2.dp),
                     verticalAlignment = Alignment.CenterVertically
