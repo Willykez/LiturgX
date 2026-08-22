@@ -23,7 +23,6 @@ import androidx.core.content.ContextCompat
 import com.willykez.liturgx.core.EpiphanyMode
 import com.willykez.liturgx.core.LiturgicalColor
 import com.willykez.liturgx.core.RegionSettings
-import com.willykez.liturgx.ui.components.SeasonBackdrop
 import com.willykez.liturgx.ui.theme.ThemeMode
 import com.willykez.liturgx.ui.theme.seasonAccentSoft
 
@@ -35,28 +34,26 @@ fun SettingsScreen(
     reminderEnabled: Boolean,
     reminderHour: Int,
     reminderMinute: Int,
+    verseReminderEnabled: Boolean,
+    verseReminderHour: Int,
+    verseReminderMinute: Int,
     onRegionChange: (RegionSettings) -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
     onReminderEnabledChange: (Boolean) -> Unit,
     onReminderTimeChange: (Int, Int) -> Unit,
+    onVerseReminderEnabledChange: (Boolean) -> Unit,
+    onVerseReminderTimeChange: (Int, Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val onBg = MaterialTheme.colorScheme.onBackground
     val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
-    val context = LocalContext.current
 
-    val notificationPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted -> onReminderEnabledChange(granted) }
-
-    Box(modifier.fillMaxSize()) {
-        SeasonBackdrop(currentColor)
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(20.dp)
-                .verticalScroll(rememberScrollState())
-        ) {
+    Column(
+        modifier
+            .fillMaxSize()
+            .padding(20.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
             Text("Mipangilio", style = MaterialTheme.typography.headlineSmall, color = onBg)
             Text(
                 "Mwonekano wa programu na mila za jimbo lako.",
@@ -70,56 +67,29 @@ fun SettingsScreen(
                 description = "Pokea arifa kila siku pindi masomo ya Kiliturujia ya siku hiyo yanapokuwa tayari.",
                 color = currentColor
             ) {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Washa Kikumbusho", color = onBg, style = MaterialTheme.typography.bodyMedium)
-                    Switch(
-                        checked = reminderEnabled,
-                        onCheckedChange = { checked ->
-                            if (checked && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                val hasPermission = ContextCompat.checkSelfPermission(
-                                    context, Manifest.permission.POST_NOTIFICATIONS
-                                ) == PackageManager.PERMISSION_GRANTED
-                                if (hasPermission) {
-                                    onReminderEnabledChange(true)
-                                } else {
-                                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                }
-                            } else {
-                                onReminderEnabledChange(checked)
-                            }
-                        }
-                    )
-                }
+                ReminderToggleContent(
+                    enabled = reminderEnabled,
+                    hour = reminderHour,
+                    minute = reminderMinute,
+                    onEnabledChange = onReminderEnabledChange,
+                    onTimeChange = onReminderTimeChange
+                )
+            }
 
-                if (reminderEnabled) {
-                    Spacer(Modifier.height(10.dp))
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "Muda: %02d:%02d".format(reminderHour, reminderMinute),
-                            color = onBg,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        TextButton(onClick = {
-                            TimePickerDialog(
-                                context,
-                                { _, h, m -> onReminderTimeChange(h, m) },
-                                reminderHour,
-                                reminderMinute,
-                                true
-                            ).show()
-                        }) {
-                            Text("Badilisha Muda")
-                        }
-                    }
-                }
+            Spacer(Modifier.height(14.dp))
+
+            SettingCard(
+                title = "Andiko la Kila Siku",
+                description = "Pokea andiko fupi la kutafakari kwa muda unaochagua -- huru dhidi ya masomo ya siku.",
+                color = currentColor
+            ) {
+                ReminderToggleContent(
+                    enabled = verseReminderEnabled,
+                    hour = verseReminderHour,
+                    minute = verseReminderMinute,
+                    onEnabledChange = onVerseReminderEnabledChange,
+                    onTimeChange = onVerseReminderTimeChange
+                )
             }
 
             Spacer(Modifier.height(14.dp))
@@ -191,6 +161,71 @@ fun SettingsScreen(
                 color = onBgDim
             )
             Spacer(Modifier.height(20.dp))
+        }
+}
+
+@Composable
+private fun ReminderToggleContent(
+    enabled: Boolean,
+    hour: Int,
+    minute: Int,
+    onEnabledChange: (Boolean) -> Unit,
+    onTimeChange: (Int, Int) -> Unit
+) {
+    val onBg = MaterialTheme.colorScheme.onBackground
+    val context = LocalContext.current
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> onEnabledChange(granted) }
+
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text("Washa Kikumbusho", color = onBg, style = MaterialTheme.typography.bodyMedium)
+        Switch(
+            checked = enabled,
+            onCheckedChange = { checked ->
+                if (checked && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    val hasPermission = ContextCompat.checkSelfPermission(
+                        context, Manifest.permission.POST_NOTIFICATIONS
+                    ) == PackageManager.PERMISSION_GRANTED
+                    if (hasPermission) {
+                        onEnabledChange(true)
+                    } else {
+                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                } else {
+                    onEnabledChange(checked)
+                }
+            }
+        )
+    }
+
+    if (enabled) {
+        Spacer(Modifier.height(10.dp))
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "Muda: %02d:%02d".format(hour, minute),
+                color = onBg,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            TextButton(onClick = {
+                TimePickerDialog(
+                    context,
+                    { _, h, m -> onTimeChange(h, m) },
+                    hour,
+                    minute,
+                    true
+                ).show()
+            }) {
+                Text("Badilisha Muda")
+            }
         }
     }
 }

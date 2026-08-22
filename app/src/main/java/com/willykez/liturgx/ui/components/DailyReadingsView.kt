@@ -52,6 +52,7 @@ fun DailyReadingsView(
 
     val context = LocalContext.current
     val repository = remember { BibleRepository(context.applicationContext) }
+    val tts = rememberTtsController()
     val scope = rememberCoroutineScope()
     var preparing by remember(dayResult) { mutableStateOf(SharePreparing.NONE) }
     var showShareMenu by remember(dayResult) { mutableStateOf(false) }
@@ -206,6 +207,7 @@ fun DailyReadingsView(
                 color = resolved.color,
                 dateText = dateLine,
                 seasonLabel = seasonLabel,
+                tts = tts,
                 label = item.label
             )
         }

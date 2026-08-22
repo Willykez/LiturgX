@@ -36,6 +36,17 @@ data class SearchResult(
     val text: String
 )
 
+/** Which portion of the Bible a search is restricted to. [Book] pins it to one specific book,
+ *  identified by its `chapters._id`. */
+sealed class SearchScope {
+    data object WholeBible : SearchScope()
+    data object OldTestament : SearchScope()
+    data object NewTestament : SearchScope()
+    data class Book(val bookId: Int, val bookName: String) : SearchScope()
+}
+
+enum class SearchMode { PHRASE, ANY_WORD }
+
 /**
  * Browsing and free-text search over the bundled Swahili Bible -- separate from
  * [BibleRepository], which resolves a single Lectionary *citation* into text. This is the
@@ -88,38 +99,77 @@ class BibleBrowseRepository(private val context: Context) {
     }
 
     /**
-     * Free-text search across every verse in the Bible. The raw `text` column carries an
-     * appended English gloss after `<br/>` (see [BibleRepository.cleanVerseText]'s doc), so a
-     * plain SQL `LIKE` would also surface verses where the term only appears in that English
-     * tail, not the Swahili verse itself. `LIKE` is used as a fast prefilter, then each
-     * candidate is re-checked against only its Swahili portion before being accepted --
-     * precision over relying on the database alone.
+     * Free-text search across the Bible, optionally restricted to a [scope] (whole Bible, one
+     * testament, or one book) and in one of two [mode]s:
+     *  - [SearchMode.PHRASE]: the query as one contiguous substring, same as a plain LIKE search.
+     *  - [SearchMode.ANY_WORD]: broader recall -- matches a verse containing *any* of the
+     *    query's individual words, OR'd together, not requiring them adjacent or even all present.
+     *
+     * The raw `text` column carries an appended English gloss after `<br/>` (see
+     * [BibleRepository.cleanVerseText]'s doc), so a plain SQL `LIKE` would also surface verses
+     * where a term only appears in that English tail, not the Swahili verse itself. `LIKE` is
+     * used as a fast prefilter, then each candidate is re-checked against only its Swahili
+     * portion before being accepted -- precision over relying on the database alone.
      */
-    fun search(query: String, limit: Int = 100): List<SearchResult> {
+    fun search(
+        query: String,
+        mode: SearchMode = SearchMode.PHRASE,
+        scope: SearchScope = SearchScope.WholeBible,
+        limit: Int = 100
+    ): List<SearchResult> {
         val term = query.trim()
         if (term.length < 2) return emptyList()
 
+        val words = term.split(Regex("\\s+")).filter { it.isNotBlank() }
         val db = BibleDatabaseHelper.getDatabase(context)
-        val escaped = term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-        val likePattern = "%$escaped%"
+
+        val whereClauses = mutableListOf("t.head = 0")
+        val args = mutableListOf<String>()
+
+        when (mode) {
+            SearchMode.PHRASE -> {
+                whereClauses += "t.text LIKE ? ESCAPE '\\'"
+                args += likePattern(term)
+            }
+            SearchMode.ANY_WORD -> {
+                whereClauses += words.joinToString(" OR ", prefix = "(", postfix = ")") { "t.text LIKE ? ESCAPE '\\'" }
+                words.forEach { args += likePattern(it) }
+            }
+        }
+
+        when (scope) {
+            is SearchScope.WholeBible -> {}
+            is SearchScope.OldTestament -> whereClauses += "c.mode = 1"
+            is SearchScope.NewTestament -> whereClauses += "c.mode = 2"
+            is SearchScope.Book -> {
+                whereClauses += "t.chapter_id = ?"
+                args += scope.bookId.toString()
+            }
+        }
+
+        // Over-fetch: some LIKE hits get filtered out below as English-only matches.
+        args += (limit * 3).toString()
 
         db.rawQuery(
             """
             SELECT c.title, t.chapter_id, t.chapter_num, t.position, t.text
             FROM texts t
             JOIN chapters c ON c._id = t.chapter_id
-            WHERE t.head = 0 AND t.text LIKE ? ESCAPE '\'
+            WHERE ${whereClauses.joinToString(" AND ")}
             ORDER BY t.chapter_id, t.chapter_num, t.position
             LIMIT ?
             """.trimIndent(),
-            // Over-fetch: some LIKE hits will be filtered out below as English-only matches.
-            arrayOf(likePattern, (limit * 3).toString())
+            args.toTypedArray()
         ).use { cursor ->
             val results = mutableListOf<SearchResult>()
             while (cursor.moveToNext() && results.size < limit) {
                 val raw = cursor.getString(4) ?: continue
                 val swahiliOnly = raw.substringBefore("<br/>")
-                if (!swahiliOnly.contains(term, ignoreCase = true)) continue
+                val matches = when (mode) {
+                    SearchMode.PHRASE -> swahiliOnly.contains(term, ignoreCase = true)
+                    SearchMode.ANY_WORD -> words.any { swahiliOnly.contains(it, ignoreCase = true) }
+                }
+                if (!matches) continue
                 results += SearchResult(
                     bookName = cursor.getString(0),
                     bookId = cursor.getInt(1),
@@ -130,5 +180,10 @@ class BibleBrowseRepository(private val context: Context) {
             }
             return results
         }
+    }
+
+    private fun likePattern(term: String): String {
+        val escaped = term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        return "%$escaped%"
     }
 }

@@ -25,7 +25,7 @@ class ReadingReminderReceiver : BroadcastReceiver() {
             NotificationHelper.showDailyReadingNotification(context, dayResult, gospel)
 
             val (hour, minute) = settingsStore.loadReminderTime()
-            ReminderScheduler.scheduleNext(context, hour, minute)
+            ReminderScheduler.scheduleNext(context, hour, minute, ReminderRequestCodes.DAILY_READING, ReadingReminderReceiver::class.java)
         }
     }
 }

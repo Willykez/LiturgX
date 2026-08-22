@@ -220,8 +220,46 @@ via a `daraja_precedence` table instead of hardcoded Kotlin rules, saint biograp
 names/occasions, and an extended year-cycle table -- documented in the bundle's own
 `APP_LOGIC.md`. Migrating to it is a real data-model change (new tables, a precedence-rank
 comparison replacing the current if-chain in the season/period resolvers) and deliberately
-wasn't started this round.
+wasn't started this round. The same bundle's Bible database (verified directly against the
+shipped `.sqlite`, not assumed) also has unused `plans`/`reading_days`/`reading_plans` tables --
+a proper reading-plan feature (progress ring, a Bible-in-a-year style plan) belongs on top of
+those and deserves its own pass rather than a shallow bolt-on.
 
-Also flagged, not yet built: book/testament-scoped Bible search, reading plans (the schema already
-anticipates `plans`/`reading_days`/`reading_plans` tables), a rotating Verse of the Day, a
-scheduled verse notification, share-a-verse, and TTS read-aloud.
+## Transparent status bar, and the rest of the engagement-feature batch
+
+**Status bar seam fixed** (`ui/Navigation.kt`): `Scaffold`'s default insets were pushing every
+screen's `SeasonBackdrop` below the status bar, leaving that strip showing `Scaffold`'s plain
+`containerColor` instead of the season wash -- exactly the seam in the screenshot. Fixed
+architecturally rather than patched per-screen: `SeasonBackdrop` now paints once, full-bleed,
+behind a transparent `Scaffold`, and every screen's own local `SeasonBackdrop` call (five of
+them) came out as dead weight once the global one covered it. Status bar *icon* color
+(light/dark) now tracks this app's own `ThemeMode` via `WindowCompat.getInsetsController(...)
+.isAppearanceLightStatusBars`, not just the system's dark mode -- those can disagree, since
+`ThemeMode` is an independent in-app setting.
+
+**Share a verse** (`ui/bible/ChapterReaderScreen.kt`): tapping any verse in the Bible browser
+reveals copy / share-as-text / share-as-image actions right under it, reusing `ShareCardDialog`
+rather than a second card design.
+
+**Verse of the Day** (`ui/home/HomeScreen.kt`, `VerseOfTheDayCard.kt`): the day's Gospel,
+trimmed to its first verse only -- tied to the actual Lectionary rather than a hand-curated list
+disconnected from the rest of the app, resolved off the main thread via `produceState`.
+
+**TTS read-aloud** (`ui/components/TtsController.kt`): one shared `TextToSpeech` engine for the
+whole readings screen (not one per card -- multiple simultaneous engine connections would be
+wasteful and risk overlapping audio), exposed as a "Sikiliza" button inside each expanded
+`ReadingBlock`. Falls back silently to the device default language if Swahili voice data isn't
+installed on a given engine, rather than failing outright.
+
+**Rotating verse notification** (`notifications/VerseReminderReceiver.kt`): a second, independent
+reminder from the daily-reading one -- separate channel, separate schedulable time, separate
+on/off switch in Settings. Rotates through all 150 Psalms by day-of-year
+(`dayOfYear % 150 + 1`) rather than a hand-picked list, so every citation it can ever produce is
+guaranteed to resolve and the rotation needs no new data. `ReminderScheduler` was generalized to
+take a request code and receiver class instead of being hardcoded to the reading reminder, so
+both reminders share one scheduling implementation instead of two near-duplicates.
+
+**Better Bible search** (`ui/bible/BibleSearchScreen.kt`, `BibleBrowseRepository.search()`):
+scope chips (whole Bible / Old Testament / New Testament / one book), a phrase-vs-any-word mode
+toggle (any-word matches if *any* query word appears, OR'd together -- broader recall than an
+exact phrase), and recent searches persisted for one-tap re-search.

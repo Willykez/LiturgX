@@ -9,7 +9,10 @@ import com.willykez.liturgx.core.RegionSettings
 import com.willykez.liturgx.data.DayResult
 import com.willykez.liturgx.data.LectionaryRepository
 import com.willykez.liturgx.data.SettingsStore
+import com.willykez.liturgx.notifications.ReminderRequestCodes
 import com.willykez.liturgx.notifications.ReminderScheduler
+import com.willykez.liturgx.notifications.ReadingReminderReceiver
+import com.willykez.liturgx.notifications.VerseReminderReceiver
 import com.willykez.liturgx.ui.theme.ThemeMode
 import java.time.LocalDate
 
@@ -31,6 +34,15 @@ class LectionaryViewModel(app: Application) : AndroidViewModel(app) {
         private set
 
     var reminderMinute by mutableStateOf(settingsStore.loadReminderTime().second)
+        private set
+
+    var verseReminderEnabled by mutableStateOf(settingsStore.loadVerseReminderEnabled())
+        private set
+
+    var verseReminderHour by mutableStateOf(settingsStore.loadVerseReminderTime().first)
+        private set
+
+    var verseReminderMinute by mutableStateOf(settingsStore.loadVerseReminderTime().second)
         private set
 
     var today by mutableStateOf(LocalDate.now())
@@ -69,9 +81,9 @@ class LectionaryViewModel(app: Application) : AndroidViewModel(app) {
         reminderEnabled = enabled
         settingsStore.saveReminderEnabled(enabled)
         if (enabled) {
-            ReminderScheduler.schedule(getApplication(), reminderHour, reminderMinute)
+            ReminderScheduler.schedule(getApplication(), reminderHour, reminderMinute, ReminderRequestCodes.DAILY_READING, ReadingReminderReceiver::class.java)
         } else {
-            ReminderScheduler.cancel(getApplication())
+            ReminderScheduler.cancel(getApplication(), ReminderRequestCodes.DAILY_READING, ReadingReminderReceiver::class.java)
         }
     }
 
@@ -80,7 +92,26 @@ class LectionaryViewModel(app: Application) : AndroidViewModel(app) {
         reminderMinute = minute
         settingsStore.saveReminderTime(hour, minute)
         if (reminderEnabled) {
-            ReminderScheduler.schedule(getApplication(), hour, minute)
+            ReminderScheduler.schedule(getApplication(), hour, minute, ReminderRequestCodes.DAILY_READING, ReadingReminderReceiver::class.java)
+        }
+    }
+
+    fun updateVerseReminderEnabled(enabled: Boolean) {
+        verseReminderEnabled = enabled
+        settingsStore.saveVerseReminderEnabled(enabled)
+        if (enabled) {
+            ReminderScheduler.schedule(getApplication(), verseReminderHour, verseReminderMinute, ReminderRequestCodes.VERSE_OF_DAY, VerseReminderReceiver::class.java)
+        } else {
+            ReminderScheduler.cancel(getApplication(), ReminderRequestCodes.VERSE_OF_DAY, VerseReminderReceiver::class.java)
+        }
+    }
+
+    fun updateVerseReminderTime(hour: Int, minute: Int) {
+        verseReminderHour = hour
+        verseReminderMinute = minute
+        settingsStore.saveVerseReminderTime(hour, minute)
+        if (verseReminderEnabled) {
+            ReminderScheduler.schedule(getApplication(), hour, minute, ReminderRequestCodes.VERSE_OF_DAY, VerseReminderReceiver::class.java)
         }
     }
 

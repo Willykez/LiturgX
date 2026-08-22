@@ -49,4 +49,19 @@ class SettingsStore(context: Context) {
     fun saveReminderTime(hour: Int, minute: Int) {
         prefs.edit().putInt("reminder_hour", hour).putInt("reminder_minute", minute).apply()
     }
+
+    fun loadVerseReminderEnabled(): Boolean = prefs.getBoolean("verse_reminder_enabled", false)
+
+    fun saveVerseReminderEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("verse_reminder_enabled", enabled).apply()
+    }
+
+    /** Defaults to noon -- a separate time of day from the reading reminder's 5 AM by design,
+     *  so the two don't land together even before the person has customized either one. */
+    fun loadVerseReminderTime(): Pair<Int, Int> =
+        prefs.getInt("verse_reminder_hour", 12) to prefs.getInt("verse_reminder_minute", 0)
+
+    fun saveVerseReminderTime(hour: Int, minute: Int) {
+        prefs.edit().putInt("verse_reminder_hour", hour).putInt("verse_reminder_minute", minute).apply()
+    }
 }

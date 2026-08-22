@@ -16,11 +16,10 @@ import androidx.compose.ui.unit.dp
 import com.willykez.liturgx.core.LiturgicalColor
 import com.willykez.liturgx.core.Saint
 import com.willykez.liturgx.ui.components.LiturgicalSeal
-import com.willykez.liturgx.ui.components.SeasonBackdrop
 import com.willykez.liturgx.ui.theme.seasonAccentSoft
 
 @Composable
-fun SaintsScreen(saints: List<Saint>, currentColor: LiturgicalColor, modifier: Modifier = Modifier) {
+fun SaintsScreen(saints: List<Saint>, modifier: Modifier = Modifier) {
     var query by remember { mutableStateOf("") }
     val filtered = remember(query, saints) {
         if (query.isBlank()) saints else saints.filter {
@@ -31,28 +30,25 @@ fun SaintsScreen(saints: List<Saint>, currentColor: LiturgicalColor, modifier: M
     val onBg = MaterialTheme.colorScheme.onBackground
     val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
 
-    Box(modifier.fillMaxSize()) {
-        SeasonBackdrop(currentColor)
-        Column(Modifier.fillMaxSize().padding(20.dp)) {
-            Text("Kalenda ya Watakatifu", style = MaterialTheme.typography.headlineSmall, color = onBg)
-            Text(
-                "Orodha teule ya sikukuu na kumbukumbu",
-                style = MaterialTheme.typography.labelMedium,
-                color = onBgDim
-            )
-            Spacer(Modifier.height(14.dp))
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                placeholder = { Text("Tafuta mtakatifu au tarehe...") },
-                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(Modifier.height(14.dp))
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                items(filtered, key = { it.id }) { saint -> SaintRow(saint) }
-            }
+    Column(modifier.fillMaxSize().padding(20.dp)) {
+        Text("Kalenda ya Watakatifu", style = MaterialTheme.typography.headlineSmall, color = onBg)
+        Text(
+            "Orodha teule ya sikukuu na kumbukumbu",
+            style = MaterialTheme.typography.labelMedium,
+            color = onBgDim
+        )
+        Spacer(Modifier.height(14.dp))
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            placeholder = { Text("Tafuta mtakatifu au tarehe...") },
+            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(Modifier.height(14.dp))
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            items(filtered, key = { it.id }) { saint -> SaintRow(saint) }
         }
     }
 }

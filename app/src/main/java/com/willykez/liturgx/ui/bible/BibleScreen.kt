@@ -27,7 +27,6 @@ import com.willykez.liturgx.core.LiturgicalColor
 import com.willykez.liturgx.data.bible.BibleBookInfo
 import com.willykez.liturgx.data.bible.BibleBrowseRepository
 import com.willykez.liturgx.data.bible.Testament
-import com.willykez.liturgx.ui.components.SeasonBackdrop
 import com.willykez.liturgx.ui.theme.seasonAccent
 import com.willykez.liturgx.ui.theme.seasonAccentSoft
 
@@ -51,7 +50,6 @@ fun BibleScreen(currentColor: LiturgicalColor, modifier: Modifier = Modifier) {
     var route by remember { mutableStateOf<BibleRoute>(BibleRoute.Books) }
 
     Box(modifier.fillMaxSize()) {
-        SeasonBackdrop(currentColor)
         when (val r = route) {
             is BibleRoute.Books -> BookListScreen(
                 books = books,
@@ -78,6 +76,7 @@ fun BibleScreen(currentColor: LiturgicalColor, modifier: Modifier = Modifier) {
             is BibleRoute.Search -> BibleSearchScreen(
                 color = currentColor,
                 repository = repository,
+                books = books,
                 onBack = { route = BibleRoute.Books },
                 onSelectResult = { result ->
                     val book = books.first { it.id == result.bookId }

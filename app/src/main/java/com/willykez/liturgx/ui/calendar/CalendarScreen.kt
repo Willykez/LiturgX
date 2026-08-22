@@ -35,7 +35,6 @@ import com.willykez.liturgx.core.SwahiliDate
 import com.willykez.liturgx.data.DayResult
 import com.willykez.liturgx.data.LectionaryRepository
 import com.willykez.liturgx.ui.components.DailyReadingsView
-import com.willykez.liturgx.ui.components.SeasonBackdrop
 import com.willykez.liturgx.ui.theme.seasonAccent
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -98,7 +97,6 @@ fun CalendarScreen(
     val visibleMonth = monthForPage(pagerState.currentPage)
 
     Box(modifier.fillMaxSize()) {
-        SeasonBackdrop(selectedResult.resolved.color)
         Column(Modifier.fillMaxSize()) {
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),

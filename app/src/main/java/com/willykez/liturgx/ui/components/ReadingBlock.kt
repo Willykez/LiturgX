@@ -65,6 +65,7 @@ fun ReadingBlock(
     color: LiturgicalColor,
     dateText: String,
     seasonLabel: String,
+    tts: TtsController,
     label: String? = null
 ) {
     val accent = seasonAccent(color)
@@ -171,11 +172,35 @@ fun ReadingBlock(
             exit = fadeOut() + shrinkVertically()
         ) {
             val text = passage?.renderedText().orEmpty()
+            val isReading = tts.currentlyReadingId == citation
             Column {
                 Spacer(Modifier.height(10.dp))
                 HairlineDivider(accent.copy(alpha = 0.25f))
                 Spacer(Modifier.height(10.dp))
                 Text(text, style = MaterialTheme.typography.bodyLarge, color = onBg)
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    Modifier
+                        .clip(RoundedCornerShape(50))
+                        .clickable {
+                            if (isReading) tts.stop() else tts.speak(citation, text)
+                        }
+                        .padding(vertical = 4.dp, horizontal = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        if (isReading) Icons.Filled.Stop else Icons.Filled.VolumeUp,
+                        contentDescription = null,
+                        tint = accent,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        if (isReading) "Simamisha" else "Sikiliza",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = accent
+                    )
+                }
             }
         }
     }
