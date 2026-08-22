@@ -4,8 +4,13 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,15 +20,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material.icons.filled.PictureAsPdf
-import androidx.compose.material.icons.filled.TextSnippet
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -62,14 +63,13 @@ import java.io.File
  * [BibleBrowseRepository.chapter]'s doc for why that's `rank`, not `position`). When arriving
  * from a search hit, [scrollToVerse] auto-scrolls to and highlights that verse.
  *
- * Long-press a verse to start a selection; tapping any other verse afterward extends it to that
- * verse (like the anchor/focus of a text selection) -- a plain tap does nothing when no
- * selection is active, so casually tapping a verse while reading never pops up a toolbar by
- * accident. The citation and combined text regenerate from the selected range automatically,
- * the same way a Lectionary citation like "Yohana 3:16-18" names a range, not a single verse.
- * The share button on the resulting selection bar mirrors [com.willykez.liturgx.ui.components.
- * DailyReadingsView]'s three-way menu (text / image / PDF) rather than jumping straight to one
- * action, reusing that exact same PDF generator with a single-item reading list.
+ * Tapping a verse toggles it into a selection set; tapping further verses adds them too --
+ * contiguous taps merge into one range, a distant tap starts a second one, so a real Lectionary
+ * citation shape like "Zaburi 33:12-13, 18-19, 20-21" (several separate verse groups, not one
+ * span) is directly reachable by tapping exactly those verses. [groupIntoRanges] does the
+ * merging; nothing about it is order-dependent, so deselecting and re-selecting verses always
+ * settles into the same minimal citation. The action row appears inline, right under whichever
+ * verse was tapped most recently -- same placement as the single-verse version had.
  */
 @Composable
 fun ChapterReaderScreen(
@@ -87,20 +87,20 @@ fun ChapterReaderScreen(
     val accent = seasonAccent(color)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
     val lines = remember(book.id, chapterNum) { repository.chapter(book.id, chapterNum) }
     val listState = rememberLazyListState()
 
-    var selectionAnchor by remember(book.id, chapterNum) { mutableStateOf<Int?>(null) }
-    var selectionFocus by remember(book.id, chapterNum) { mutableStateOf<Int?>(null) }
-    var showShareMenu by remember { mutableStateOf(false) }
-    var showImageShare by remember { mutableStateOf(false) }
+    var selectedVerses by remember(book.id, chapterNum) { mutableStateOf<Set<Int>>(emptySet()) }
+    var lastTappedVerse by remember(book.id, chapterNum) { mutableStateOf<Int?>(null) }
     var isPreparingPdf by remember { mutableStateOf(false) }
+    var showImageShare by remember { mutableStateOf(false) }
     var pdfFile by remember { mutableStateOf<File?>(null) }
     var showPdfPreview by remember { mutableStateOf(false) }
 
     LaunchedEffect(book.id, chapterNum, scrollToVerse) {
-        selectionAnchor = null
-        selectionFocus = null
+        selectedVerses = emptySet()
+        lastTappedVerse = null
         if (scrollToVerse != null) {
             val index = lines.indexOfFirst { !it.isHeading && it.position == scrollToVerse }
             if (index >= 0) listState.animateScrollToItem(index)
@@ -109,32 +109,27 @@ fun ChapterReaderScreen(
         }
     }
 
-    val selectionRange: IntRange? = if (selectionAnchor != null && selectionFocus != null) {
-        minOf(selectionAnchor!!, selectionFocus!!)..maxOf(selectionAnchor!!, selectionFocus!!)
-    } else null
-
-    val selectedLines = selectionRange?.let { range -> lines.filter { !it.isHeading && it.position in range } }.orEmpty()
-    val selectionIsPoetic = selectedLines.any { it.text.contains('\n') }
-    val selectionText = selectedLines.joinToString(if (selectionIsPoetic) "\n" else " ") { it.text }
-    val selectionCitation = selectionRange?.let { range ->
-        if (range.first == range.last) "${book.name} $chapterNum:${range.first}"
-        else "${book.name} $chapterNum:${range.first}-${range.last}"
+    fun toggleVerse(position: Int) {
+        selectedVerses = if (position in selectedVerses) selectedVerses - position else selectedVerses + position
+        lastTappedVerse = if (selectedVerses.isEmpty()) null else position
     }
 
-    fun clearSelection() {
-        selectionAnchor = null
-        selectionFocus = null
-    }
-
-    fun onVerseLongClick(position: Int) {
-        selectionAnchor = position
-        selectionFocus = position
-    }
-
-    fun onVerseTap(position: Int) {
-        if (selectionAnchor != null) {
-            selectionFocus = position
+    val selectionGroups = remember(selectedVerses) {
+        groupIntoRanges(selectedVerses).map { range ->
+            lines.filter { !it.isHeading && it.position in range }
         }
+    }
+    val selectionIsPoetic = selectionGroups.flatten().any { it.text.contains('\n') }
+    val selectionText = selectionGroups.joinToString("\n\n") { group ->
+        group.joinToString(if (selectionIsPoetic) "\n" else " ") { it.text }
+    }
+    val selectionCitation = remember(selectedVerses) {
+        citationFor(book.name, chapterNum, selectedVerses)
+    }
+
+    var activeCitation by remember { mutableStateOf<String?>(null) }
+    if (selectionCitation != null) {
+        activeCitation = selectionCitation
     }
 
     Column(Modifier.fillMaxSize().padding(top = 8.dp)) {
@@ -167,95 +162,16 @@ fun ChapterReaderScreen(
             }
         }
 
-        if (selectionRange != null && selectionCitation != null) {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    selectionCitation,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = accent,
-                    modifier = Modifier.weight(1f)
-                )
-                if (isPreparingPdf) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp).padding(end = 8.dp), strokeWidth = 2.dp, color = accent)
-                }
-                IconButton(onClick = {
-                    val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    cm.setPrimaryClip(ClipData.newPlainText("Andiko", "$selectionCitation\n\n$selectionText"))
-                }, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Filled.ContentCopy, contentDescription = "Nakili", tint = onBgDim, modifier = Modifier.size(16.dp))
-                }
-                Box {
-                    IconButton(onClick = { showShareMenu = true }, enabled = !isPreparingPdf, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Filled.IosShare, contentDescription = "Shiriki", tint = onBgDim, modifier = Modifier.size(16.dp))
-                    }
-                    DropdownMenu(expanded = showShareMenu, onDismissRequest = { showShareMenu = false }) {
-                        DropdownMenuItem(
-                            text = { Text("Shiriki kama Maandishi") },
-                            leadingIcon = { Icon(Icons.Filled.TextSnippet, contentDescription = null) },
-                            onClick = {
-                                showShareMenu = false
-                                val intent = Intent(Intent.ACTION_SEND).apply {
-                                    type = "text/plain"
-                                    putExtra(Intent.EXTRA_TEXT, "$selectionCitation\n\n$selectionText\n\nImetumwa kutoka LiturgX")
-                                }
-                                context.startActivity(Intent.createChooser(intent, "Shiriki Andiko"))
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Shiriki kama Picha") },
-                            leadingIcon = { Icon(Icons.Outlined.Image, contentDescription = null) },
-                            onClick = { showShareMenu = false; showImageShare = true }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Hifadhi kama PDF") },
-                            leadingIcon = { Icon(Icons.Filled.PictureAsPdf, contentDescription = null) },
-                            onClick = {
-                                showShareMenu = false
-                                isPreparingPdf = true
-                                scope.launch {
-                                    val file = withContext(Dispatchers.IO) {
-                                        DailyReadingPdfGenerator.generate(
-                                            context = context,
-                                            dateText = book.name,
-                                            seasonText = "BIBLIA",
-                                            color = color,
-                                            readings = listOf(
-                                                DayCardReading(
-                                                    kindLabel = "Andiko",
-                                                    citation = selectionCitation,
-                                                    passageText = selectionText,
-                                                    responseText = null
-                                                )
-                                            )
-                                        )
-                                    }
-                                    isPreparingPdf = false
-                                    pdfFile = file
-                                    showPdfPreview = true
-                                }
-                            }
-                        )
-                    }
-                }
-                IconButton(onClick = { clearSelection() }, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Filled.Close, contentDescription = "Funga uteuzi", tint = onBgDim, modifier = Modifier.size(16.dp))
-                }
-            }
-        }
-
         LazyColumn(
             state = listState,
             modifier = Modifier.weight(1f).fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            items(lines) { line ->
+            items(
+                items = lines,
+                key = { line -> "${line.position}_${line.isHeading}_${line.text.hashCode()}" }
+            ) { line ->
                 if (line.isHeading) {
                     Text(
                         line.text,
@@ -265,18 +181,75 @@ fun ChapterReaderScreen(
                         modifier = Modifier.padding(top = 14.dp, bottom = 6.dp)
                     )
                 } else {
-                    VerseLine(
-                        line = line,
-                        emphasized = (scrollToVerse != null && line.position == scrollToVerse) ||
-                            (selectionRange != null && line.position in selectionRange),
-                        accent = accent,
-                        onBg = onBg,
-                        onTap = { onVerseTap(line.position) },
-                        onLongPress = { onVerseLongClick(line.position) }
-                    )
+                    Column {
+                        VerseLine(
+                            line = line,
+                            emphasized = (scrollToVerse != null && line.position == scrollToVerse) || line.position in selectedVerses,
+                            accent = accent,
+                            onBg = onBg,
+                            onTap = { toggleVerse(line.position) }
+                        )
+
+                        AnimatedVisibility(
+                            visible = lastTappedVerse == line.position && selectionCitation != null,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
+                        ) {
+                            activeCitation?.let { citationText ->
+                                SelectionActionRow(
+                                    citation = citationText,
+                                    text = selectionText,
+                                    isPreparingPdf = isPreparingPdf,
+                                    accent = accent,
+                                    onBgDim = onBgDim,
+                                    onCopy = {
+                                        val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                        cm.setPrimaryClip(ClipData.newPlainText("Andiko", "$citationText\n\n$selectionText"))
+                                    },
+                                    onShareText = {
+                                        val intent = Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(Intent.EXTRA_TEXT, "$citationText\n\n$selectionText\n\nImetumwa kutoka LiturgX")
+                                        }
+                                        context.startActivity(Intent.createChooser(intent, "Shiriki Andiko"))
+                                    },
+                                    onShareImage = { showImageShare = true },
+                                    onSharePdf = {
+                                        if (!isPreparingPdf) {
+                                            isPreparingPdf = true
+                                            scope.launch {
+                                                val file = withContext(Dispatchers.IO) {
+                                                    DailyReadingPdfGenerator.generate(
+                                                        context = context,
+                                                        dateText = book.name,
+                                                        seasonText = "BIBLIA",
+                                                        color = color,
+                                                        readings = listOf(
+                                                            DayCardReading(
+                                                                kindLabel = "Andiko",
+                                                                citation = citationText,
+                                                                passageText = selectionText,
+                                                                responseText = null
+                                                            )
+                                                        )
+                                                    )
+                                                }
+                                                isPreparingPdf = false
+                                                pdfFile = file
+                                                showPdfPreview = true
+                                            }
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
             }
-            item { Spacer(Modifier.height(24.dp)) }
+
+            item {
+                Spacer(Modifier.height(24.dp))
+            }
         }
     }
 
@@ -303,21 +276,53 @@ fun ChapterReaderScreen(
     }
 }
 
+/**
+ * Sorted positions collapse into the fewest possible contiguous ranges -- {12,13,18,19} becomes
+ * [12..13, 18..19], never something order-dependent on which verse was tapped first or last.
+ */
+private fun groupIntoRanges(positions: Set<Int>): List<IntRange> {
+    if (positions.isEmpty()) return emptyList()
+    val sorted = positions.sorted()
+    val ranges = mutableListOf<IntRange>()
+    var start = sorted[0]
+    var prev = sorted[0]
+    for (i in 1 until sorted.size) {
+        val current = sorted[i]
+        if (current == prev + 1) {
+            prev = current
+        } else {
+            ranges += start..prev
+            start = current
+            prev = current
+        }
+    }
+    ranges += start..prev
+    return ranges
+}
+
+private fun citationFor(bookName: String, chapterNum: Int, positions: Set<Int>): String? {
+    val ranges = groupIntoRanges(positions)
+    if (ranges.isEmpty()) return null
+    val parts = ranges.joinToString(", ") { r ->
+        if (r.first == r.last) "${r.first}" else "${r.first}-${r.last}"
+    }
+    return "$bookName $chapterNum:$parts"
+}
+
 @Composable
 private fun VerseLine(
     line: ChapterLine,
     emphasized: Boolean,
     accent: Color,
     onBg: Color,
-    onTap: () -> Unit,
-    onLongPress: () -> Unit
+    onTap: () -> Unit
 ) {
     Row(
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .background(if (emphasized) accent.copy(alpha = 0.16f) else Color.Transparent)
-            .combinedClickable(onClick = onTap, onLongClick = onLongPress)
+            .clickable(onClick = onTap)
             .padding(vertical = 3.dp, horizontal = if (emphasized) 6.dp else 0.dp)
     ) {
         Text(
@@ -334,5 +339,41 @@ private fun VerseLine(
             color = onBg,
             modifier = Modifier.weight(1f)
         )
+    }
+}
+
+@Composable
+private fun SelectionActionRow(
+    citation: String,
+    text: String,
+    isPreparingPdf: Boolean,
+    accent: Color,
+    onBgDim: Color,
+    onCopy: () -> Unit,
+    onShareText: () -> Unit,
+    onShareImage: () -> Unit,
+    onSharePdf: () -> Unit
+) {
+    Column(Modifier.padding(start = 26.dp, top = 2.dp, bottom = 8.dp)) {
+        Text(citation, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = accent)
+        Spacer(Modifier.height(4.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            IconButton(onClick = onCopy, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.Filled.ContentCopy, contentDescription = "Nakili", tint = onBgDim, modifier = Modifier.size(16.dp))
+            }
+            IconButton(onClick = onShareText, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.Filled.IosShare, contentDescription = "Shiriki kama maandishi", tint = onBgDim, modifier = Modifier.size(16.dp))
+            }
+            IconButton(onClick = onShareImage, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.Outlined.Image, contentDescription = "Shiriki kama picha", tint = onBgDim, modifier = Modifier.size(16.dp))
+            }
+            IconButton(onClick = onSharePdf, enabled = !isPreparingPdf, modifier = Modifier.size(32.dp)) {
+                if (isPreparingPdf) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = accent)
+                } else {
+                    Icon(Icons.Filled.PictureAsPdf, contentDescription = "Hifadhi kama PDF", tint = onBgDim, modifier = Modifier.size(16.dp))
+                }
+            }
+        }
     }
 }
