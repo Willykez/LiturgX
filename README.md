@@ -263,3 +263,16 @@ both reminders share one scheduling implementation instead of two near-duplicate
 scope chips (whole Bible / Old Testament / New Testament / one book), a phrase-vs-any-word mode
 toggle (any-word matches if *any* query word appears, OR'd together -- broader recall than an
 exact phrase), and recent searches persisted for one-tap re-search.
+
+## Multi-verse selection in the Bible browser
+
+Long-pressing a verse in `ChapterReaderScreen` starts a range selection; tapping any other verse
+afterward extends it (anchor/focus, like text selection) and the citation regenerates
+automatically -- "Yohana 3:16" becomes "Yohana 3:16-18" as the range grows, the same convention
+Lectionary citations already use. A plain tap does nothing when no selection is active, so
+reading normally never pops up a toolbar by accident.
+
+The resulting selection bar's share button opens the same three-way menu (text / image / PDF)
+`DailyReadingsView` uses for a full day's readings, reusing `DailyReadingPdfGenerator` and
+`ShareCardDialog` with a single-item reading list rather than building a second PDF/card
+pipeline just for ad-hoc Bible-browser selections.
