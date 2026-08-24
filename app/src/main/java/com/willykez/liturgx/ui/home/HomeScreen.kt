@@ -39,14 +39,14 @@ fun HomeScreen(todayResult: DayResult, modifier: Modifier = Modifier) {
         openedDates = progressStore.openedDates()
     }
 
-    // Trimmed to the Gospel's FIRST verse only -- a whole Gospel reading isn't a "verse of the
-    // day", and this stays true to the actual day rather than a hand-curated list disconnected
-    // from the Lectionary the rest of the app is built around. Falls back to whichever reading
-    // is first if there's genuinely no Gospel entry for the day (rare structural edge case).
+    // Uses the day's Shangilio (Gospel Acclamation) citation, which is already a single short
+    // verse by design -- falls back to whichever reading is first if there's no Shangilio for
+    // the day (placeholder entries like "[hakuna mstari maalum]" are already filtered out of
+    // `items` upstream in ReadingPresenter, so this only sees real citations).
     val verseOfDay by produceState<VerseOfDay?>(initialValue = null, todayResult) {
         value = withContext(Dispatchers.IO) {
             val items = ReadingPresenter.present(todayResult.readings)
-            val chosen = items.firstOrNull { it.kindKey == "INJILI" } ?: items.firstOrNull()
+            val chosen = items.firstOrNull { it.kindKey == "SHANGILIO" } ?: items.firstOrNull()
             chosen?.let { item ->
                 val passage = bibleRepository.getPassage(item.citation)
                 val firstVerse = passage?.verses?.firstOrNull()

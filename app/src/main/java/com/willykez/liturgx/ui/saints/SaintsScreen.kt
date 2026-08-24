@@ -1,11 +1,15 @@
 package com.willykez.liturgx.ui.saints
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -58,19 +62,41 @@ private fun SaintRow(saint: Saint) {
     val color = LiturgicalColor.fromSwahili(saint.rangi)
     val onBg = MaterialTheme.colorScheme.onBackground
     val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
-    Row(
+    var expanded by remember(saint.id) { mutableStateOf(false) }
+    val hasBio = !saint.wasifu.isNullOrBlank()
+
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(seasonAccentSoft(color))
-            .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .clickable(enabled = hasBio) { expanded = !expanded }
+            .padding(14.dp)
     ) {
-        LiturgicalSeal(color, size = 34.dp)
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(saint.jina, style = MaterialTheme.typography.titleMedium, color = onBg)
-            Text("${saint.tarehe} · ${saint.daraja}", style = MaterialTheme.typography.labelMedium, color = onBgDim)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            LiturgicalSeal(color, size = 34.dp)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(saint.jina, style = MaterialTheme.typography.titleMedium, color = onBg)
+                Text("${saint.tarehe} · ${saint.daraja}", style = MaterialTheme.typography.labelMedium, color = onBgDim)
+            }
+            if (hasBio) {
+                Icon(
+                    if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                    contentDescription = if (expanded) "Funga wasifu" else "Soma wasifu",
+                    tint = onBgDim
+                )
+            }
+        }
+        AnimatedVisibility(visible = expanded && hasBio) {
+            Column {
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    saint.wasifu.orEmpty(),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = onBg
+                )
+            }
         }
     }
 }

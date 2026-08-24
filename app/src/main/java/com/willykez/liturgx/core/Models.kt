@@ -64,7 +64,8 @@ data class Saint(
     val tarehe: String,
     val jina: String,
     val daraja: String,   // Sikukuu / Sikukuu Kuu / Kumbukumbu / Kumbukumbu ya Hiari
-    val rangi: String?
+    val rangi: String?,
+    val wasifu: String?
 )
 
 /** User-configurable regional variants flagged explicitly in APP_LOGIC.md §9. */

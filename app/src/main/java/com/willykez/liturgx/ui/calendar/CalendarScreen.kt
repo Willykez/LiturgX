@@ -159,7 +159,7 @@ fun CalendarScreen(
         TextButton(
             onClick = { onJumpToToday(); scope.launch { pagerState.animateScrollToPage(pageForMonth(YearMonth.from(today))) } },
             modifier = Modifier
-                .align(Alignment.BottomStart)
+                .align(Alignment.BottomEnd)
                 .padding(16.dp)
                 .clip(RoundedCornerShape(50))
                 .background(onBg.copy(alpha = 0.08f))

@@ -58,7 +58,8 @@ class LectionaryDao(private val db: SQLiteDatabase) {
                         tarehe = c.getString(c.getColumnIndexOrThrow("tarehe")),
                         jina = c.getString(c.getColumnIndexOrThrow("jina")),
                         daraja = c.getString(c.getColumnIndexOrThrow("daraja")),
-                        rangi = c.getString(c.getColumnIndexOrThrow("rangi"))
+                        rangi = c.getString(c.getColumnIndexOrThrow("rangi")),
+                        wasifu = c.getString(c.getColumnIndexOrThrow("wasifu"))
                     )
                 )
             }
@@ -76,7 +77,8 @@ class LectionaryDao(private val db: SQLiteDatabase) {
                         tarehe = c.getString(c.getColumnIndexOrThrow("tarehe")),
                         jina = c.getString(c.getColumnIndexOrThrow("jina")),
                         daraja = c.getString(c.getColumnIndexOrThrow("daraja")),
-                        rangi = c.getString(c.getColumnIndexOrThrow("rangi"))
+                        rangi = c.getString(c.getColumnIndexOrThrow("rangi")),
+                        wasifu = c.getString(c.getColumnIndexOrThrow("wasifu"))
                     )
                 )
             }
