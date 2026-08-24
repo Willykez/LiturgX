@@ -276,3 +276,22 @@ The resulting selection bar's share button opens the same three-way menu (text /
 `DailyReadingsView` uses for a full day's readings, reusing `DailyReadingPdfGenerator` and
 `ShareCardDialog` with a single-item reading list rather than building a second PDF/card
 pipeline just for ad-hoc Bible-browser selections.
+
+## Calendar redesign: Monday-first grid, per-day color dots, tap-select
+
+`MonthGrid.kt` was rebuilt against a reference layout: Monday-first columns (was Sunday-first),
+week-number gutter removed, and English 3-letter weekday abbreviations (`Mon Tue Wed...`) --
+that last one deliberate and specific to this one header, unlike the rest of the app's Swahili
+UI: Swahili's first four weekday names all start "Juma-", which abbreviated to 3 Swahili letters
+collapsed four different days down to the same unreadable "Jum" label.
+
+Every day now gets a dot in *that day's own* resolved liturgical color, not just days with a
+named saint -- an at-a-glance view of how a season's colors actually run across the month.
+Today gets a thin ring in its own color; the selected day (when different from today) gets a
+solid fill in the current app accent -- selection is a UI state, not a liturgical fact, so it
+deliberately doesn't borrow the day's own color the way the dot does. Today's weekday column
+header is highlighted in today's color too. Month navigation got explicit chevron buttons
+alongside the swipe gesture, and the relative-day text line became a compact date/title/color-pill
+summary row -- which meant giving `DailyReadingsView` a `showHeader` flag so its own date/title
+block doesn't duplicate right underneath the new summary; `HomeScreen` still uses the default
+(`true`), only `CalendarScreen` opts out.

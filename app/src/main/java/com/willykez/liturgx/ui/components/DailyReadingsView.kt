@@ -40,6 +40,7 @@ private enum class SharePreparing { NONE, TEXT, PDF }
 fun DailyReadingsView(
     dayResult: DayResult,
     extraHeaderContent: (@Composable () -> Unit)? = null,
+    showHeader: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val resolved = dayResult.resolved
@@ -155,42 +156,44 @@ fun DailyReadingsView(
                     }
                 }
 
-                Text(dateLine, style = MaterialTheme.typography.labelMedium, color = onBgDim)
-                Spacer(Modifier.height(6.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    LiturgicalSeal(resolved.color, size = 40.dp)
-                    Spacer(Modifier.width(14.dp))
-                    Column {
-                        Text(
-                            seasonLabel,
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = onBg
-                        )
-                        Text(
-                            "Rangi ya Liturujia: ${resolved.color.swahili}"
-                                    + (resolved.cycleYear?.let { " · Mwaka $it" } ?: "")
-                                    + (resolved.weekdayCycle?.let { " · Mzunguko $it" } ?: ""),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = accent
-                        )
-                    }
-                }
-
-                resolved.overridingSaint?.let { saint ->
-                    Spacer(Modifier.height(10.dp))
-                    AssistChip(text = "${saint.daraja} — ${resolved.label}", accentHex = accent)
-                }
-                dayResult.optionalMemorial?.let { memorial ->
-                    Spacer(Modifier.height(8.dp))
+                if (showHeader) {
+                    Text(dateLine, style = MaterialTheme.typography.labelMedium, color = onBgDim)
+                    Spacer(Modifier.height(6.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Star, contentDescription = null, tint = onBgDim, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            "Leo pia ni ukumbusho wa hiari wa ${memorial.jina}",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = onBgDim,
-                            fontStyle = FontStyle.Italic
-                        )
+                        LiturgicalSeal(resolved.color, size = 40.dp)
+                        Spacer(Modifier.width(14.dp))
+                        Column {
+                            Text(
+                                seasonLabel,
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = onBg
+                            )
+                            Text(
+                                "Rangi ya Liturujia: ${resolved.color.swahili}"
+                                        + (resolved.cycleYear?.let { " · Mwaka $it" } ?: "")
+                                        + (resolved.weekdayCycle?.let { " · Mzunguko $it" } ?: ""),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = accent
+                            )
+                        }
+                    }
+
+                    resolved.overridingSaint?.let { saint ->
+                        Spacer(Modifier.height(10.dp))
+                        AssistChip(text = "${saint.daraja} — ${resolved.label}", accentHex = accent)
+                    }
+                    dayResult.optionalMemorial?.let { memorial ->
+                        Spacer(Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Filled.Star, contentDescription = null, tint = onBgDim, modifier = Modifier.size(14.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                "Leo pia ni ukumbusho wa hiari wa ${memorial.jina}",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = onBgDim,
+                                fontStyle = FontStyle.Italic
+                            )
+                        }
                     }
                 }
             }

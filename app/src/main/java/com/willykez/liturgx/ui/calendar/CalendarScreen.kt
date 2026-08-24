@@ -1,12 +1,14 @@
 package com.willykez.liturgx.ui.calendar
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.EditCalendar
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material3.DatePicker
@@ -54,11 +56,11 @@ private fun pageForMonth(month: YearMonth): Int =
     ChronoUnit.MONTHS.between(PAGER_START_MONTH, month).toInt().coerceIn(0, PAGE_COUNT - 1)
 
 /**
- * A real visual month calendar (Sunday-first grid, swipe left/right between months, week-number
- * gutter, today/selected/notable-day markers) with the tapped day's full readings docked below
- * it -- modeled directly on the platform Calendar app's month view + day agenda, rather than a
- * bare [DatePickerDialog] (kept here only as a secondary "jump to a specific date" shortcut,
- * since swiping month-by-month to a date a year away is impractical).
+ * A real visual month calendar (Monday-first grid, swipe or tap the chevrons to change months,
+ * today/selected markers, every day's own liturgical color as a small dot) with the tapped
+ * day's full readings docked below it -- modeled on the platform Calendar app's month view + day
+ * agenda, rather than a bare [DatePickerDialog] (kept here only as a secondary "jump to a
+ * specific date" shortcut, since swiping month-by-month to a date a year away is impractical).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,7 +88,7 @@ fun CalendarScreen(
     )
 
     // Keep the pager following the selected date when it changes from outside a swipe --
-    // the "Leo" button, or the date-picker shortcut below.
+    // the "Leo" button, the chevrons, or the date-picker shortcut below.
     LaunchedEffect(selectedDate) {
         val targetPage = pageForMonth(YearMonth.from(selectedDate))
         if (pagerState.currentPage != targetPage) {
@@ -96,6 +98,12 @@ fun CalendarScreen(
 
     val visibleMonth = monthForPage(pagerState.currentPage)
 
+    fun stepMonth(delta: Long) {
+        scope.launch {
+            pagerState.animateScrollToPage((pagerState.currentPage + delta).toInt().coerceIn(0, PAGE_COUNT - 1))
+        }
+    }
+
     Box(modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             Row(
@@ -103,20 +111,21 @@ fun CalendarScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text(
-                        SwahiliDate.monthName(visibleMonth.monthValue),
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = onBg
-                    )
-                    Text(
-                        visibleMonth.year.toString(),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = onBgDim
-                    )
-                }
-                IconButton(onClick = { showPicker = true }) {
-                    Icon(Icons.Filled.EditCalendar, contentDescription = "Chagua tarehe mahususi", tint = onBgDim)
+                Text(
+                    "${SwahiliDate.monthName(visibleMonth.monthValue)} ${visibleMonth.year}",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = onBg
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { showPicker = true }) {
+                        Icon(Icons.Filled.EditCalendar, contentDescription = "Chagua tarehe mahususi", tint = onBgDim)
+                    }
+                    IconButton(onClick = { stepMonth(-1) }) {
+                        Icon(Icons.Filled.ChevronLeft, contentDescription = "Mwezi uliopita", tint = onBg)
+                    }
+                    IconButton(onClick = { stepMonth(1) }) {
+                        Icon(Icons.Filled.ChevronRight, contentDescription = "Mwezi ujao", tint = onBg)
+                    }
                 }
             }
 
@@ -136,17 +145,13 @@ fun CalendarScreen(
                 )
             }
 
-            Spacer(Modifier.height(4.dp))
-            Text(
-                relativeDayLabel(selectedDate, today),
-                style = MaterialTheme.typography.labelMedium,
-                color = onBgDim,
-                modifier = Modifier.padding(horizontal = 20.dp)
-            )
+            Spacer(Modifier.height(10.dp))
+            DaySummaryRow(selectedResult, accent, onBg, onBgDim)
             Spacer(Modifier.height(4.dp))
 
             DailyReadingsView(
                 dayResult = selectedResult,
+                showHeader = false,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -187,14 +192,43 @@ fun CalendarScreen(
     }
 }
 
-private fun relativeDayLabel(date: LocalDate, today: LocalDate): String {
-    val head = "${SwahiliDate.weekdayName(date.dayOfWeek)}, ${SwahiliDate.monthName(date.monthValue)} ${date.dayOfMonth}"
-    val days = ChronoUnit.DAYS.between(date, today)
-    return when {
-        days == 0L -> "$head, Leo"
-        days == 1L -> "$head, jana"
-        days == -1L -> "$head, kesho"
-        days > 1L -> "$head, siku $days zilizopita"
-        else -> "$head, baada ya siku ${-days}"
+/** The compact date + title + color-pill summary shown between the grid and the full readings
+ *  below -- the day's title comes straight from [DayResult], same source [DailyReadingsView]'s
+ *  own (now-suppressed-here-via-`showHeader=false`) header would have used. */
+@Composable
+private fun DaySummaryRow(
+    dayResult: DayResult,
+    accent: androidx.compose.ui.graphics.Color,
+    onBg: androidx.compose.ui.graphics.Color,
+    onBgDim: androidx.compose.ui.graphics.Color
+) {
+    val resolved = dayResult.resolved
+    val d = resolved.date
+    val dateHead = "${SwahiliDate.weekdayName(d.dayOfWeek)}, ${d.dayOfMonth} ${SwahiliDate.monthName(d.monthValue)} ${d.year}"
+    val title = resolved.overridingSaint?.jina ?: resolved.label
+    val colorName = resolved.color.swahili.replaceFirstChar { it.uppercase() }
+
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(dateHead, style = MaterialTheme.typography.labelMedium, color = onBgDim)
+            Spacer(Modifier.height(4.dp))
+            Text(title, style = MaterialTheme.typography.titleLarge, color = onBg)
+        }
+        Spacer(Modifier.width(12.dp))
+        Row(
+            Modifier
+                .clip(RoundedCornerShape(50))
+                .background(accent.copy(alpha = 0.16f))
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(Modifier.size(10.dp).clip(CircleShape).background(accent))
+            Spacer(Modifier.width(6.dp))
+            Text(colorName, style = MaterialTheme.typography.labelMedium, color = accent)
+        }
     }
 }

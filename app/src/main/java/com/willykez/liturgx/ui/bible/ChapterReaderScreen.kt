@@ -87,7 +87,6 @@ fun ChapterReaderScreen(
     val accent = seasonAccent(color)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-
     val lines = remember(book.id, chapterNum) { repository.chapter(book.id, chapterNum) }
     val listState = rememberLazyListState()
 
@@ -115,9 +114,7 @@ fun ChapterReaderScreen(
     }
 
     val selectionGroups = remember(selectedVerses) {
-        groupIntoRanges(selectedVerses).map { range ->
-            lines.filter { !it.isHeading && it.position in range }
-        }
+        groupIntoRanges(selectedVerses).map { range -> lines.filter { !it.isHeading && it.position in range } }
     }
     val selectionIsPoetic = selectionGroups.flatten().any { it.text.contains('\n') }
     val selectionText = selectionGroups.joinToString("\n\n") { group ->
@@ -125,11 +122,6 @@ fun ChapterReaderScreen(
     }
     val selectionCitation = remember(selectedVerses) {
         citationFor(book.name, chapterNum, selectedVerses)
-    }
-
-    var activeCitation by remember { mutableStateOf<String?>(null) }
-    if (selectionCitation != null) {
-        activeCitation = selectionCitation
     }
 
     Column(Modifier.fillMaxSize().padding(top = 8.dp)) {
@@ -168,10 +160,7 @@ fun ChapterReaderScreen(
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            items(
-                items = lines,
-                key = { line -> "${line.position}_${line.isHeading}_${line.text.hashCode()}" }
-            ) { line ->
+            items(lines) { line ->
                 if (line.isHeading) {
                     Text(
                         line.text,
@@ -184,32 +173,32 @@ fun ChapterReaderScreen(
                     Column {
                         VerseLine(
                             line = line,
-                            emphasized = (scrollToVerse != null && line.position == scrollToVerse) || line.position in selectedVerses,
+                            emphasized = (scrollToVerse != null && line.position == scrollToVerse) ||
+                                line.position in selectedVerses,
                             accent = accent,
                             onBg = onBg,
                             onTap = { toggleVerse(line.position) }
                         )
-
                         AnimatedVisibility(
                             visible = lastTappedVerse == line.position && selectionCitation != null,
                             enter = fadeIn() + expandVertically(),
                             exit = fadeOut() + shrinkVertically()
                         ) {
-                            activeCitation?.let { citationText ->
+                            if (selectionCitation != null) {
                                 SelectionActionRow(
-                                    citation = citationText,
+                                    citation = selectionCitation,
                                     text = selectionText,
                                     isPreparingPdf = isPreparingPdf,
                                     accent = accent,
                                     onBgDim = onBgDim,
                                     onCopy = {
                                         val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                        cm.setPrimaryClip(ClipData.newPlainText("Andiko", "$citationText\n\n$selectionText"))
+                                        cm.setPrimaryClip(ClipData.newPlainText("Andiko", "$selectionCitation\n\n$selectionText"))
                                     },
                                     onShareText = {
                                         val intent = Intent(Intent.ACTION_SEND).apply {
                                             type = "text/plain"
-                                            putExtra(Intent.EXTRA_TEXT, "$citationText\n\n$selectionText\n\nImetumwa kutoka LiturgX")
+                                            putExtra(Intent.EXTRA_TEXT, "$selectionCitation\n\n$selectionText\n\nImetumwa kutoka LiturgX")
                                         }
                                         context.startActivity(Intent.createChooser(intent, "Shiriki Andiko"))
                                     },
@@ -218,6 +207,7 @@ fun ChapterReaderScreen(
                                         if (!isPreparingPdf) {
                                             isPreparingPdf = true
                                             scope.launch {
+                                                val citation = selectionCitation
                                                 val file = withContext(Dispatchers.IO) {
                                                     DailyReadingPdfGenerator.generate(
                                                         context = context,
@@ -227,7 +217,7 @@ fun ChapterReaderScreen(
                                                         readings = listOf(
                                                             DayCardReading(
                                                                 kindLabel = "Andiko",
-                                                                citation = citationText,
+                                                                citation = citation,
                                                                 passageText = selectionText,
                                                                 responseText = null
                                                             )
@@ -246,10 +236,7 @@ fun ChapterReaderScreen(
                     }
                 }
             }
-
-            item {
-                Spacer(Modifier.height(24.dp))
-            }
+            item { Spacer(Modifier.height(24.dp)) }
         }
     }
 
@@ -276,10 +263,8 @@ fun ChapterReaderScreen(
     }
 }
 
-/**
- * Sorted positions collapse into the fewest possible contiguous ranges -- {12,13,18,19} becomes
- * [12..13, 18..19], never something order-dependent on which verse was tapped first or last.
- */
+/** Sorted positions collapse into the fewest possible contiguous ranges -- {12,13,18,19} becomes
+ *  [12..13, 18..19], never something order-dependent on which verse was tapped first or last. */
 private fun groupIntoRanges(positions: Set<Int>): List<IntRange> {
     if (positions.isEmpty()) return emptyList()
     val sorted = positions.sorted()
@@ -303,9 +288,7 @@ private fun groupIntoRanges(positions: Set<Int>): List<IntRange> {
 private fun citationFor(bookName: String, chapterNum: Int, positions: Set<Int>): String? {
     val ranges = groupIntoRanges(positions)
     if (ranges.isEmpty()) return null
-    val parts = ranges.joinToString(", ") { r ->
-        if (r.first == r.last) "${r.first}" else "${r.first}-${r.last}"
-    }
+    val parts = ranges.joinToString(", ") { r -> if (r.first == r.last) "${r.first}" else "${r.first}-${r.last}" }
     return "$bookName $chapterNum:$parts"
 }
 
