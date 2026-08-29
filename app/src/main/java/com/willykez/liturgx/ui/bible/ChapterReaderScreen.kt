@@ -340,7 +340,7 @@ private fun SelectionActionRow(
     Column(Modifier.padding(start = 26.dp, top = 2.dp, bottom = 8.dp)) {
         Text(citation, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = accent)
         Spacer(Modifier.height(4.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             IconButton(onClick = onCopy, modifier = Modifier.size(32.dp)) {
                 Icon(Icons.Filled.ContentCopy, contentDescription = "Nakili", tint = onBgDim, modifier = Modifier.size(16.dp))
             }

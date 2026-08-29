@@ -3,6 +3,7 @@ package com.willykez.liturgx.ui
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.MenuBook
@@ -19,9 +20,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -73,7 +76,7 @@ fun LiturgXApp() {
         WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
     }
 
-    LiturgXTheme(accent = accentColor, darkTheme = darkTheme) {
+    LiturgXTheme(accent = accentColor, darkTheme = darkTheme, textScale = vm.textScale) {
         val background = MaterialTheme.colorScheme.background
         val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
 
@@ -114,11 +117,15 @@ fun LiturgXApp() {
                     }
                 }
             ) { padding ->
-                NavHost(
-                    navController = navController,
-                    startDestination = Dest.Leo.route,
-                    modifier = Modifier.padding(padding)
-                ) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+                    NavHost(
+                        navController = navController,
+                        startDestination = Dest.Leo.route,
+                        modifier = Modifier
+                            .padding(padding)
+                            .widthIn(max = 640.dp)
+                            .fillMaxSize()
+                    ) {
                     composable(Dest.Leo.route) {
                         HomeScreen(todayResult = vm.todayResult)
                     }
@@ -147,16 +154,19 @@ fun LiturgXApp() {
                             verseReminderEnabled = vm.verseReminderEnabled,
                             verseReminderHour = vm.verseReminderHour,
                             verseReminderMinute = vm.verseReminderMinute,
+                            textScale = vm.textScale,
                             onRegionChange = { vm.updateRegion(it) },
                             onThemeModeChange = { vm.updateThemeMode(it) },
                             onReminderEnabledChange = { vm.updateReminderEnabled(it) },
                             onReminderTimeChange = { h, m -> vm.updateReminderTime(h, m) },
                             onVerseReminderEnabledChange = { vm.updateVerseReminderEnabled(it) },
-                            onVerseReminderTimeChange = { h, m -> vm.updateVerseReminderTime(h, m) }
+                            onVerseReminderTimeChange = { h, m -> vm.updateVerseReminderTime(h, m) },
+                            onTextScaleChange = { vm.updateTextScale(it) }
                         )
                     }
                 }
             }
         }
     }
+}
 }

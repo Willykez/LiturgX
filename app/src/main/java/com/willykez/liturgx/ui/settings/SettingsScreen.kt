@@ -23,6 +23,7 @@ import androidx.core.content.ContextCompat
 import com.willykez.liturgx.core.EpiphanyMode
 import com.willykez.liturgx.core.LiturgicalColor
 import com.willykez.liturgx.core.RegionSettings
+import com.willykez.liturgx.ui.theme.TextScale
 import com.willykez.liturgx.ui.theme.ThemeMode
 import com.willykez.liturgx.ui.theme.seasonAccentSoft
 
@@ -37,12 +38,14 @@ fun SettingsScreen(
     verseReminderEnabled: Boolean,
     verseReminderHour: Int,
     verseReminderMinute: Int,
+    textScale: TextScale,
     onRegionChange: (RegionSettings) -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
     onReminderEnabledChange: (Boolean) -> Unit,
     onReminderTimeChange: (Int, Int) -> Unit,
     onVerseReminderEnabledChange: (Boolean) -> Unit,
     onVerseReminderTimeChange: (Int, Int) -> Unit,
+    onTextScaleChange: (TextScale) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val onBg = MaterialTheme.colorScheme.onBackground
@@ -108,6 +111,26 @@ fun SettingsScreen(
                             onClick = { onThemeModeChange(mode) }
                         )
                         if (mode != ThemeMode.entries.last()) Spacer(Modifier.height(2.dp))
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(14.dp))
+
+            SettingCard(
+                title = "Ukubwa wa Maandishi",
+                description = "Badilisha ukubwa wa maandishi kote kwenye programu -- muhimu kwa usomaji rahisi.",
+                color = currentColor
+            ) {
+                Column(Modifier.fillMaxWidth()) {
+                    TextScale.entries.forEach { scale ->
+                        ThemeModeRow(
+                            label = scale.label,
+                            selected = textScale == scale,
+                            accentColor = currentColor,
+                            onClick = { onTextScaleChange(scale) }
+                        )
+                        if (scale != TextScale.entries.last()) Spacer(Modifier.height(2.dp))
                     }
                 }
             }

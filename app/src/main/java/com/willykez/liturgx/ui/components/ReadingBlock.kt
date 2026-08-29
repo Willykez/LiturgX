@@ -154,6 +154,7 @@ fun ReadingBlock(
                     modifier = Modifier.size(16.dp)
                 )
             }
+            Spacer(Modifier.width(4.dp))
             IconButton(onClick = {
                 resolveIfNeeded()
                 showShareCard = true

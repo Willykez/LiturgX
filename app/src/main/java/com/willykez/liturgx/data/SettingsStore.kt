@@ -64,4 +64,14 @@ class SettingsStore(context: Context) {
     fun saveVerseReminderTime(hour: Int, minute: Int) {
         prefs.edit().putInt("verse_reminder_hour", hour).putInt("verse_reminder_minute", minute).apply()
     }
+
+    fun loadTextScale(): com.willykez.liturgx.ui.theme.TextScale {
+        val name = prefs.getString("text_scale", null) ?: return com.willykez.liturgx.ui.theme.TextScale.WASTANI
+        return runCatching { com.willykez.liturgx.ui.theme.TextScale.valueOf(name) }
+            .getOrDefault(com.willykez.liturgx.ui.theme.TextScale.WASTANI)
+    }
+
+    fun saveTextScale(scale: com.willykez.liturgx.ui.theme.TextScale) {
+        prefs.edit().putString("text_scale", scale.name).apply()
+    }
 }

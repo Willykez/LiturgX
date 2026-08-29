@@ -45,6 +45,9 @@ class LectionaryViewModel(app: Application) : AndroidViewModel(app) {
     var verseReminderMinute by mutableStateOf(settingsStore.loadVerseReminderTime().second)
         private set
 
+    var textScale by mutableStateOf(settingsStore.loadTextScale())
+        private set
+
     var today by mutableStateOf(LocalDate.now())
         private set
 
@@ -73,6 +76,11 @@ class LectionaryViewModel(app: Application) : AndroidViewModel(app) {
     fun updateThemeMode(mode: ThemeMode) {
         themeMode = mode
         settingsStore.saveThemeMode(mode)
+    }
+
+    fun updateTextScale(scale: com.willykez.liturgx.ui.theme.TextScale) {
+        textScale = scale
+        settingsStore.saveTextScale(scale)
     }
 
     /** The permission dance (Android 13+ POST_NOTIFICATIONS) happens in SettingsScreen, which
