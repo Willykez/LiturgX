@@ -10,16 +10,33 @@ import androidx.compose.ui.unit.sp
 val ScriptureFont = FontFamily.Serif
 val ChromeFont = FontFamily.SansSerif
 
-/** User-facing choice, persisted via SettingsStore -- an accessibility control, not a cosmetic
- *  one: scales every TextStyle's fontSize (and lineHeight, so lines don't start overlapping at
- *  larger sizes) app-wide via [scaledTypography], the same shape Android's own system text-size
- *  setting takes, rather than a "reading mode" that only touches Scripture text and leaves
- *  button labels and dialogs behind at the base size. */
-enum class TextScale(val label: String, val factor: Float) {
-    NDOGO("Ndogo", 0.9f),
-    WASTANI("Wastani", 1.0f),
-    KUBWA("Kubwa", 1.15f),
-    KUBWA_ZAIDI("Kubwa Zaidi", 1.3f)
+/**
+ * User-facing choice, persisted via SettingsStore -- an accessibility control, not a cosmetic
+ * one: scales every TextStyle's fontSize (and lineHeight, so lines don't start overlapping at
+ * larger sizes) app-wide via [scaledTypography], the same shape Android's own system text-size
+ * setting takes, rather than a "reading mode" that only touches Scripture text and leaves
+ * button labels and dialogs behind at the base size.
+ *
+ * Previously a fixed 4-step enum (Ndogo/Wastani/Kubwa/Kubwa Zaidi); now a continuous factor
+ * driven by a Material3 [androidx.compose.material3.Slider] in Settings, so a person can dial
+ * in exactly the size that's comfortable instead of picking the nearest of four presets.
+ */
+object TextScale {
+    const val MIN = 0.85f
+    const val MAX = 1.5f
+    const val DEFAULT = 1.0f
+
+    fun coerce(value: Float): Float = value.coerceIn(MIN, MAX)
+
+    /** Back-compat: the old build stored one of four named presets. Map them onto the new
+     *  continuous range so nobody's saved preference silently resets on upgrade. */
+    fun fromLegacyName(name: String): Float? = when (name) {
+        "NDOGO" -> 0.9f
+        "WASTANI" -> 1.0f
+        "KUBWA" -> 1.15f
+        "KUBWA_ZAIDI" -> 1.3f
+        else -> null
+    }
 }
 
 val LiturgXTypography = Typography(
@@ -35,11 +52,11 @@ val LiturgXTypography = Typography(
     labelSmall = TextStyle(fontFamily = ChromeFont, fontWeight = FontWeight.Medium, fontSize = 11.sp, letterSpacing = 0.6.sp),
 )
 
-fun scaledTypography(scale: TextScale): Typography {
-    if (scale == TextScale.WASTANI) return LiturgXTypography
+fun scaledTypography(scale: Float): Typography {
+    if (scale == 1.0f) return LiturgXTypography
     fun TextStyle.scaled() = copy(
-        fontSize = fontSize * scale.factor,
-        lineHeight = if (lineHeight.isSp) lineHeight * scale.factor else lineHeight
+        fontSize = fontSize * scale,
+        lineHeight = if (lineHeight.isSp) lineHeight * scale else lineHeight
     )
     return Typography(
         displaySmall = LiturgXTypography.displaySmall.scaled(),

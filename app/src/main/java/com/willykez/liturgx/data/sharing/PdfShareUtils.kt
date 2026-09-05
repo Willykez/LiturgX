@@ -9,13 +9,13 @@ import java.io.File
 /** Shares a PDF already written to app cache (by [DailyReadingPdfGenerator]) via a
  *  content:// URI, same FileProvider setup as [ImageShareUtils]. */
 object PdfShareUtils {
-    fun share(context: Context, file: File) {
+    fun share(context: Context, file: File, chooserTitle: String = "Shiriki Masomo kama PDF") {
         val uri: Uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "application/pdf"
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(Intent.createChooser(intent, "Shiriki Masomo kama PDF"))
+        context.startActivity(Intent.createChooser(intent, chooserTitle))
     }
 }

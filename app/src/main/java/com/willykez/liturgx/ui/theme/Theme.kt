@@ -51,7 +51,7 @@ fun isDarkThemeActive(mode: ThemeMode): Boolean = when (mode) {
 }
 
 @Composable
-fun LiturgXTheme(accent: LiturgicalColor, darkTheme: Boolean, textScale: TextScale = TextScale.WASTANI, content: @Composable () -> Unit) {
+fun LiturgXTheme(accent: LiturgicalColor, darkTheme: Boolean, textScale: Float = TextScale.DEFAULT, content: @Composable () -> Unit) {
     val accentColor = seasonAccent(accent)
     val scheme = if (darkTheme) {
         darkColorScheme(

@@ -87,9 +87,20 @@ object PeriodResolver {
             date.monthValue == 1 && date.dayOfMonth in 2..5 && date.isBefore(epiphany) -> SeasonalSpot(
                 "oktava", listOf("oktava"), SwahiliDate.abbrev(date),
                 "Kabla ya Epifania — ${SwahiliDate.full(date)}", LiturgicalColor.NYEUPE)
-            date.isAfter(epiphany) && date.isBefore(baptism) -> SeasonalSpot(
-                "baada_ya_epifania", listOf("baada_ya_epifania"), SwahiliDate.weekdayCode(date),
+            // BUGFIX: this used to request entryKeys=listOf("baada_ya_epifania"), but the
+            // dataset stores these weekday rows under entry_key='siku_za_wiki' (same convention
+            // as every other weekday block in the app) -- the mismatch meant every weekday
+            // between Epiphany and the Baptism of the Lord silently returned zero readings.
+            date.isAfter(epiphany) && date.isBefore(baptism) && date.dayOfWeek != java.time.DayOfWeek.SUNDAY -> SeasonalSpot(
+                "baada_ya_epifania", listOf("siku_za_wiki"), SwahiliDate.weekdayCode(date),
                 "Baada ya Epifania", LiturgicalColor.NYEUPE)
+            // Rare day (APP_LOGIC.md §9): only reachable when Epiphany is NOT transferred to
+            // Sunday (fixed Jan 6) and Jan 6 falls late enough in the week to leave an actual
+            // Sunday between Jan 1 (Mary Mother of God) and Epiphany itself.
+            region.epiphanyMode == EpiphanyMode.FIXED_JAN6 && date.dayOfWeek == java.time.DayOfWeek.SUNDAY &&
+                date.isAfter(epiphany.minusYears(0).let { LocalDate.of(christmasYear + 1, 1, 1) }) && date.isBefore(epiphany) -> SeasonalSpot(
+                "dominika_ya_pili_baada_ya_noeli", listOf("dominika_ya_pili_baada_ya_noeli"), null,
+                "Dominika ya Pili baada ya Noeli", LiturgicalColor.NYEUPE)
             else -> SeasonalSpot("mchana", listOf("mchana"), null,
                 "Noeli", LiturgicalColor.NYEUPE) // safe fallback within the octave window
         }

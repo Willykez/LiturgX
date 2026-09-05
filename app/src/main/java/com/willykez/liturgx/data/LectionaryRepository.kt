@@ -31,8 +31,20 @@ class LectionaryRepository(context: Context) {
         // (Advent/Lent/Easter Sundays and the Triduum are already resolved directly by season logic
         // and are never weaker than a sikukuu_maalum row, so we only ever apply this in Ordinary Time.)
         if (!skipFixed && seasonal.season == Season.MUDA_WA_KAWAIDA) {
-            val sikukuu = dao.sikukuuMaalumFor(fullDate)
-            if (sikukuu.isNotEmpty()) {
+            val allHits = dao.sikukuuMaalumFor(fullDate)
+            if (allHits.isNotEmpty()) {
+                // BUGFIX: a handful of sikukuu_maalum rows (e.g. Kubadilika Sura kwa Bwana /
+                // Transfiguration) are split into three rows, one per Sunday-cycle year, via
+                // `mwaka_liturujia`. The old code returned every matching row regardless of
+                // cycle, which meant all three years' worth of readings got stacked together
+                // on screen every year instead of just the current one. Filter to the current
+                // cycle when the hit set actually varies by year; rows with no year tag (the
+                // overwhelming majority of sikukuu_maalum entries) are unaffected.
+                val sikukuu = if (allHits.any { it.mwakaLiturujia != null }) {
+                    allHits.filter { it.mwakaLiturujia == null || it.mwakaLiturujia == seasonal.cycleYear }
+                } else {
+                    allHits
+                }
                 val overridden = seasonal.copy(
                     season = Season.SIKUKUU_MAALUM,
                     periodKey = sikukuu.first().periodKey,

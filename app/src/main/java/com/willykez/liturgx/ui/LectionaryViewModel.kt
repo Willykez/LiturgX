@@ -78,8 +78,8 @@ class LectionaryViewModel(app: Application) : AndroidViewModel(app) {
         settingsStore.saveThemeMode(mode)
     }
 
-    fun updateTextScale(scale: com.willykez.liturgx.ui.theme.TextScale) {
-        textScale = scale
+    fun updateTextScale(scale: Float) {
+        textScale = com.willykez.liturgx.ui.theme.TextScale.coerce(scale)
         settingsStore.saveTextScale(scale)
     }
 

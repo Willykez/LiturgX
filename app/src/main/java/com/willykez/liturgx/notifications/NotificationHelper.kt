@@ -43,20 +43,29 @@ object NotificationHelper {
             manager.createNotificationChannel(
                 NotificationChannel(
                     VERSE_CHANNEL_ID,
-                    "Andiko la Kila Siku",
+                    "Neno la Kila Siku",
                     NotificationManager.IMPORTANCE_DEFAULT
                 ).apply { description = "Andiko fupi la kila siku kwa ajili ya kutafakari" }
             )
         }
     }
 
-    fun showDailyReadingNotification(context: Context, dayResult: DayResult, gospel: ReadingItem?) {
+    /**
+     * Now lists every reading's reference for the day (First Reading, Psalm, Second Reading
+     * when there is one, Gospel), not just the Gospel citation on its own -- a person glancing
+     * at the notification shade gets the full set of references to look up, the same as
+     * opening the app to Leo would show them, instead of just one of several readings.
+     */
+    fun showDailyReadingNotification(context: Context, dayResult: DayResult, readingItems: List<ReadingItem>) {
         ensureChannel(context)
         if (!hasNotificationPermission(context)) return
 
         val title = "Masomo ya Leo Yapo Tayari"
-        val body = gospel?.let { "Injili: ${it.citation}" }
-            ?: (dayResult.resolved.overridingSaint?.jina ?: dayResult.resolved.label)
+        val body = if (readingItems.isNotEmpty()) {
+            readingItems.joinToString("\n") { "${it.label}: ${it.citation}" }
+        } else {
+            dayResult.resolved.overridingSaint?.jina ?: dayResult.resolved.label
+        }
 
         notify(context, READING_CHANNEL_ID, READING_NOTIFICATION_ID, title, body)
     }
@@ -66,7 +75,7 @@ object NotificationHelper {
         if (!hasNotificationPermission(context) || passage == null) return
 
         val firstVerse = passage.verses.firstOrNull() ?: return
-        val title = "Andiko la Leo"
+        val title = "Neno la Leo"
         val body = "${firstVerse.text}\n— ${passage.book} ${firstVerse.chapter}:${firstVerse.verse}"
 
         notify(context, VERSE_CHANNEL_ID, VERSE_NOTIFICATION_ID, title, body)

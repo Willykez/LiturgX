@@ -65,13 +65,25 @@ class SettingsStore(context: Context) {
         prefs.edit().putInt("verse_reminder_hour", hour).putInt("verse_reminder_minute", minute).apply()
     }
 
-    fun loadTextScale(): com.willykez.liturgx.ui.theme.TextScale {
-        val name = prefs.getString("text_scale", null) ?: return com.willykez.liturgx.ui.theme.TextScale.WASTANI
-        return runCatching { com.willykez.liturgx.ui.theme.TextScale.valueOf(name) }
-            .getOrDefault(com.willykez.liturgx.ui.theme.TextScale.WASTANI)
+    /** Now a continuous factor (Material3 slider) rather than a 4-step enum. Reads the new
+     *  "text_scale_factor" float key when present; otherwise falls back to the old build's
+     *  named-preset string key ("text_scale") so nobody's saved choice is silently lost on
+     *  upgrade, then migrates it to the new key. */
+    fun loadTextScale(): Float {
+        if (prefs.contains("text_scale_factor")) {
+            return com.willykez.liturgx.ui.theme.TextScale.coerce(prefs.getFloat("text_scale_factor", com.willykez.liturgx.ui.theme.TextScale.DEFAULT))
+        }
+        val legacyName = prefs.getString("text_scale", null)
+        val migrated = legacyName?.let { com.willykez.liturgx.ui.theme.TextScale.fromLegacyName(it) }
+            ?: com.willykez.liturgx.ui.theme.TextScale.DEFAULT
+        saveTextScale(migrated)
+        return migrated
     }
 
-    fun saveTextScale(scale: com.willykez.liturgx.ui.theme.TextScale) {
-        prefs.edit().putString("text_scale", scale.name).apply()
+    fun saveTextScale(scale: Float) {
+        prefs.edit()
+            .putFloat("text_scale_factor", com.willykez.liturgx.ui.theme.TextScale.coerce(scale))
+            .remove("text_scale")
+            .apply()
     }
 }

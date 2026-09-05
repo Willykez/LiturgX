@@ -40,7 +40,7 @@ fun VerseOfTheDayCard(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Filled.FormatQuote, contentDescription = null, tint = accent, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text("Andiko la Leo", style = MaterialTheme.typography.titleMedium, color = onBg)
+            Text("Neno la Leo", style = MaterialTheme.typography.titleMedium, color = onBg)
         }
         Spacer(Modifier.height(10.dp))
         Text(

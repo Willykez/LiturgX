@@ -10,16 +10,26 @@ import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -37,21 +47,38 @@ import com.willykez.liturgx.ui.calendar.CalendarScreen
 import com.willykez.liturgx.ui.components.SeasonBackdrop
 import com.willykez.liturgx.ui.home.HomeScreen
 import com.willykez.liturgx.ui.saints.SaintsScreen
-import com.willykez.liturgx.ui.settings.SettingsScreen
+import com.willykez.liturgx.ui.settings.SettingsSheetContent
 import com.willykez.liturgx.ui.theme.LiturgXTheme
 import com.willykez.liturgx.ui.theme.isDarkThemeActive
 import com.willykez.liturgx.ui.theme.seasonAccent
+import kotlinx.coroutines.launch
 
+/**
+ * Settings ("Mipangilio") used to be its own bottom-nav tab/destination -- navigating to it
+ * meant leaving whatever you were doing (e.g. mid-read on Leo/Kalenda) and losing your place.
+ * It's now a [ModalBottomSheet] reachable from a small gear icon docked in a top bar present
+ * on every screen, so a person can nudge a setting (font size, region toggle, reminders)
+ * without ever navigating away -- the screen underneath stays exactly as it was, still visible
+ * and scrolled to the same spot, once the sheet is dismissed.
+ */
 private sealed class Dest(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
     object Leo : Dest("leo", "Leo", Icons.Filled.WbSunny)
     object Kalenda : Dest("kalenda", "Kalenda", Icons.Filled.CalendarMonth)
     object Biblia : Dest("biblia", "Biblia", Icons.Filled.MenuBook)
     object Watakatifu : Dest("watakatifu", "Watakatifu", Icons.Filled.Star)
-    object Mipangilio : Dest("mipangilio", "Mipangilio", Icons.Filled.Settings)
 }
 
-private val destinations = listOf(Dest.Leo, Dest.Kalenda, Dest.Biblia, Dest.Watakatifu, Dest.Mipangilio)
+private val destinations = listOf(Dest.Leo, Dest.Kalenda, Dest.Biblia, Dest.Watakatifu)
 
+private fun titleFor(route: String?): String = when (route) {
+    Dest.Leo.route -> "LiturgX"
+    Dest.Kalenda.route -> "Kalenda"
+    Dest.Biblia.route -> "Biblia"
+    Dest.Watakatifu.route -> "Watakatifu"
+    else -> "LiturgX"
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LiturgXApp() {
     val vm: LectionaryViewModel = viewModel()
@@ -76,6 +103,10 @@ fun LiturgXApp() {
         WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
     }
 
+    var showSettingsSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    val sheetScope = rememberCoroutineScope()
+
     LiturgXTheme(accent = accentColor, darkTheme = darkTheme, textScale = vm.textScale) {
         val background = MaterialTheme.colorScheme.background
         val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
@@ -89,6 +120,22 @@ fun LiturgXApp() {
 
             Scaffold(
                 containerColor = Color.Transparent,
+                topBar = {
+                    TopAppBar(
+                        title = { Text(titleFor(currentRoute), style = MaterialTheme.typography.titleLarge) },
+                        actions = {
+                            IconButton(onClick = { showSettingsSheet = true }) {
+                                Icon(Icons.Filled.Settings, contentDescription = "Mipangilio")
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.Transparent,
+                            titleContentColor = MaterialTheme.colorScheme.onBackground,
+                            actionIconContentColor = seasonAccent(accentColor)
+                        ),
+                        windowInsets = TopAppBarDefaults.windowInsets
+                    )
+                },
                 bottomBar = {
                     NavigationBar(containerColor = background) {
                         val accent = seasonAccent(accentColor)
@@ -126,47 +173,59 @@ fun LiturgXApp() {
                             .widthIn(max = 640.dp)
                             .fillMaxSize()
                     ) {
-                    composable(Dest.Leo.route) {
-                        HomeScreen(todayResult = vm.todayResult)
+                        composable(Dest.Leo.route) {
+                            HomeScreen(todayResult = vm.todayResult)
+                        }
+                        composable(Dest.Kalenda.route) {
+                            CalendarScreen(
+                                selectedResult = vm.selectedResult,
+                                region = vm.region,
+                                onSelectDate = { vm.goToDate(it) },
+                                onJumpToToday = { vm.jumpToToday() }
+                            )
+                        }
+                        composable(Dest.Watakatifu.route) {
+                            SaintsScreen(saints = vm.saintsList())
+                        }
+                        composable(Dest.Biblia.route) {
+                            BibleScreen(currentColor = vm.selectedResult.resolved.color)
+                        }
                     }
-                    composable(Dest.Kalenda.route) {
-                        CalendarScreen(
-                            selectedResult = vm.selectedResult,
-                            region = vm.region,
-                            onSelectDate = { vm.goToDate(it) },
-                            onJumpToToday = { vm.jumpToToday() }
-                        )
-                    }
-                    composable(Dest.Watakatifu.route) {
-                        SaintsScreen(saints = vm.saintsList())
-                    }
-                    composable(Dest.Biblia.route) {
-                        BibleScreen(currentColor = vm.selectedResult.resolved.color)
-                    }
-                    composable(Dest.Mipangilio.route) {
-                        SettingsScreen(
-                            region = vm.region,
-                            themeMode = vm.themeMode,
-                            currentColor = vm.selectedResult.resolved.color,
-                            reminderEnabled = vm.reminderEnabled,
-                            reminderHour = vm.reminderHour,
-                            reminderMinute = vm.reminderMinute,
-                            verseReminderEnabled = vm.verseReminderEnabled,
-                            verseReminderHour = vm.verseReminderHour,
-                            verseReminderMinute = vm.verseReminderMinute,
-                            textScale = vm.textScale,
-                            onRegionChange = { vm.updateRegion(it) },
-                            onThemeModeChange = { vm.updateThemeMode(it) },
-                            onReminderEnabledChange = { vm.updateReminderEnabled(it) },
-                            onReminderTimeChange = { h, m -> vm.updateReminderTime(h, m) },
-                            onVerseReminderEnabledChange = { vm.updateVerseReminderEnabled(it) },
-                            onVerseReminderTimeChange = { h, m -> vm.updateVerseReminderTime(h, m) },
-                            onTextScaleChange = { vm.updateTextScale(it) }
-                        )
-                    }
+                }
+            }
+
+            if (showSettingsSheet) {
+                ModalBottomSheet(
+                    onDismissRequest = { showSettingsSheet = false },
+                    sheetState = sheetState,
+                    containerColor = background
+                ) {
+                    SettingsSheetContent(
+                        region = vm.region,
+                        themeMode = vm.themeMode,
+                        currentColor = vm.selectedResult.resolved.color,
+                        reminderEnabled = vm.reminderEnabled,
+                        reminderHour = vm.reminderHour,
+                        reminderMinute = vm.reminderMinute,
+                        verseReminderEnabled = vm.verseReminderEnabled,
+                        verseReminderHour = vm.verseReminderHour,
+                        verseReminderMinute = vm.verseReminderMinute,
+                        textScale = vm.textScale,
+                        onRegionChange = { vm.updateRegion(it) },
+                        onThemeModeChange = { vm.updateThemeMode(it) },
+                        onReminderEnabledChange = { vm.updateReminderEnabled(it) },
+                        onReminderTimeChange = { h, m -> vm.updateReminderTime(h, m) },
+                        onVerseReminderEnabledChange = { vm.updateVerseReminderEnabled(it) },
+                        onVerseReminderTimeChange = { h, m -> vm.updateVerseReminderTime(h, m) },
+                        onTextScaleChange = { vm.updateTextScale(it) },
+                        onClose = {
+                            sheetScope.launch {
+                                sheetState.hide()
+                            }.invokeOnCompletion { showSettingsSheet = false }
+                        }
+                    )
                 }
             }
         }
     }
-}
 }

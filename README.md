@@ -277,6 +277,84 @@ The resulting selection bar's share button opens the same three-way menu (text /
 `ShareCardDialog` with a single-item reading list rather than building a second PDF/card
 pipeline just for ad-hoc Bible-browser selections.
 
+## Database merge, bug fixes, settings-as-bottom-sheet, yearly PDF export, and reminder upgrade
+
+**Database merge.** The supplied `lectionary_swahili_bundle` (the "more complete lectionary
+dataset" flagged above as future work) turned out to use a different `entry_key`/`period_key`
+convention than this app's resolvers query for in several spots (Palm Sunday, the Triduum,
+Pentecost's alternates, the Christmas octave, Advent's Dec 17–24 block, and more) — a blind
+asset swap would have silently broken those days. `assets/lectionary_swahili.db` was rebuilt
+from the bundle's JSON (the richer/corrected source of truth) but re-flattened to match the
+key conventions this app's `PeriodResolver`/`LectionaryDao` already query for, then verified
+by re-implementing the full resolution algorithm in Python and simulating **every day across
+9 years, in both Epiphany-mode settings, with zero unresolved lookups**. New tables
+(`daraja_precedence`, `prefasi_za_liturujia`) ship in the database for future use but aren't
+wired into the resolver yet — a genuine data-driven precedence engine (per `APP_LOGIC.md` §7)
+is a bigger rewrite than this pass; the existing hardcoded season/period logic is unchanged in
+structure, just corrected against the new key names.
+
+**Real bugs found and fixed along the way** (pre-existing, not introduced by the merge):
+- Holy Thursday, Good Friday, Christmas Day, Epiphany, Mary Mother of God, and Ash Wednesday
+  all requested an `entry_key` that never matched any row in the shipped database (it stored
+  `NULL` for these single-row days instead of the self-named key the resolver asked for) —
+  every one of these was silently returning **zero readings**. Fixed by giving each of these
+  rows a real `entry_key` matching what `PeriodResolver` already requests.
+- Every weekday between Epiphany and the Baptism of the Lord had the same class of bug
+  (`PeriodResolver` asked for `entry_key='baada_ya_epifania'`; the data was filed under
+  `'siku_za_wiki'`) — fixed in `PeriodResolver.noeli()`.
+- Christmas-octave day lookups (`Des 26`–`Jan 5`) never matched because the database stored
+  descriptive day strings ("Des 26 - Stefano Shahidi") while the code generates a plain
+  "Des 26" — normalized during the rebuild.
+- `DatabaseProvider` (and, for consistency, `BibleDatabaseHelper`) only ever copied the
+  bundled asset into app storage when no local copy existed yet — meaning **a database update
+  shipped in a new build was silently ignored on any device that already had the app
+  installed**. Both now carry a version constant checked against SharedPreferences, forcing a
+  fresh copy when it changes.
+- Kubadilika Sura kwa Bwana (Transfiguration) is one of the few `sikukuu_maalum` entries split
+  per Sunday-cycle year (A/B/C); `LectionaryRepository` used to return all three years' rows
+  together instead of just the current cycle's, stacking three sets of readings on one day.
+  Now filtered by the resolved `cycleYear` when a hit set actually varies by year.
+- Added the rare "2nd Sunday after Christmas" (`dominika_ya_pili_baada_ya_noeli`) case
+  documented but never implemented — only reachable with the fixed-Jan-6 Epiphany region
+  setting, when an actual Sunday falls between Jan 1 and Epiphany.
+
+**Settings is now a bottom sheet, not a tab** (`ui/Navigation.kt`,
+`ui/settings/SettingsScreen.kt`): "Mipangilio" no longer has its own bottom-nav destination.
+Every screen now sits under a slim top bar with a gear icon that opens Settings as a
+`ModalBottomSheet` overlay — a person can change a region toggle, retime a reminder, or drag
+the font-size slider without navigating away from (and losing their scroll position/focus in)
+whatever they were reading. The sheet is dismissed by swiping down, tapping outside, or its own
+close button; `SettingsScreen.kt` now exports `SettingsSheetContent` instead of a full-screen
+composable.
+
+**Font size is now a slider.** `TextScale` changed from a fixed 4-step enum (Ndogo/Wastani/
+Kubwa/Kubwa Zaidi) to a continuous `Float` (0.85–1.5, default 1.0) driven by a Material3
+`Slider` with a live percentage readout and preview line. `SettingsStore` migrates anyone's old
+saved preset onto the equivalent point on the new scale automatically the first time it loads
+after upgrading, so nobody's choice resets.
+
+**Full-year PDF export** (`data/sharing/YearlyLectionaryPdfGenerator.kt`): a new "Kalenda ya
+Mwaka (PDF)" card in Settings resolves every day of the current civil year and exports a
+compact, citation-only (not full Scripture text — this is a print-friendly at-a-glance
+reference, not a lectionary of full passages) PDF covering every Sunday plus every special
+holiday: `sikukuu_maalum` fixed solemnities, Feast-rank saints, and the season-resolved
+solemnities that don't fall on Sundays (Christmas, Epiphany, the Triduum, Ascension/Corpus
+Christi when kept on Thursday, etc). Grouped by month, one page flows into the next as needed.
+Runs off the main thread (`Dispatchers.IO`) since it's 365+ lookups, then shares via the
+existing `PdfShareUtils`/`FileProvider` pipeline `DailyReadingPdfGenerator` already set up.
+
+**Daily reminder now lists every reading, not just the Gospel** (`notifications/
+NotificationHelper.kt`): the notification body used to show only the Gospel citation (or a
+saint/day name if there was none). It now lists every resolved reading's label and citation
+(First Reading, Psalm, Second Reading when there is one, Gospel Acclamation, Gospel) the same
+way `ReadingPresenter` renders them on screen, via `BigTextStyle` so the full list is visible
+in the expanded notification.
+
+**"Andiko la Leo" → "Neno la Leo"**: renamed on the Home screen's verse card
+(`VerseOfTheDayCard.kt`), the verse-reminder notification title, and the matching Settings
+card/notification-channel label ("Andiko la Kila Siku" → "Neno la Kila Siku") for consistency,
+since it's the same feature named in two places.
+
 ## Calendar redesign: Monday-first grid, per-day color dots, tap-select
 
 `MonthGrid.kt` was rebuilt against a reference layout: Monday-first columns (was Sunday-first),

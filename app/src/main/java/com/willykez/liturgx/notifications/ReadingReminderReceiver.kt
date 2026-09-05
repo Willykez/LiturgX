@@ -21,8 +21,8 @@ class ReadingReminderReceiver : BroadcastReceiver() {
             val repository = LectionaryRepository(context)
             val today = LocalDate.now()
             val dayResult = repository.getForDate(today, settingsStore.load())
-            val gospel = ReadingPresenter.present(dayResult.readings).firstOrNull { it.kindKey == "INJILI" }
-            NotificationHelper.showDailyReadingNotification(context, dayResult, gospel)
+            val readingItems = ReadingPresenter.present(dayResult.readings)
+            NotificationHelper.showDailyReadingNotification(context, dayResult, readingItems)
 
             val (hour, minute) = settingsStore.loadReminderTime()
             ReminderScheduler.scheduleNext(context, hour, minute, ReminderRequestCodes.DAILY_READING, ReadingReminderReceiver::class.java)
