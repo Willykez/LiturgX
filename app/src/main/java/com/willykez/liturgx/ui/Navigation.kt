@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Settings
@@ -42,11 +43,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.willykez.liturgx.data.bible.BibleBrowseRepository
 import com.willykez.liturgx.ui.bible.BibleScreen
 import com.willykez.liturgx.ui.calendar.CalendarScreen
 import com.willykez.liturgx.ui.components.SeasonBackdrop
 import com.willykez.liturgx.ui.home.HomeScreen
 import com.willykez.liturgx.ui.saints.SaintsScreen
+import com.willykez.liturgx.ui.saved.SavedScreen
 import com.willykez.liturgx.ui.settings.SettingsSheetContent
 import com.willykez.liturgx.ui.theme.LiturgXTheme
 import com.willykez.liturgx.ui.theme.isDarkThemeActive
@@ -66,15 +69,17 @@ private sealed class Dest(val route: String, val label: String, val icon: androi
     object Kalenda : Dest("kalenda", "Kalenda", Icons.Filled.CalendarMonth)
     object Biblia : Dest("biblia", "Biblia", Icons.Filled.MenuBook)
     object Watakatifu : Dest("watakatifu", "Watakatifu", Icons.Filled.Star)
+    object Hifadhi : Dest("hifadhi", "Hifadhi", Icons.Filled.Bookmarks)
 }
 
-private val destinations = listOf(Dest.Leo, Dest.Kalenda, Dest.Biblia, Dest.Watakatifu)
+private val destinations = listOf(Dest.Leo, Dest.Kalenda, Dest.Biblia, Dest.Watakatifu, Dest.Hifadhi)
 
 private fun titleFor(route: String?): String = when (route) {
     Dest.Leo.route -> "LiturgX"
     Dest.Kalenda.route -> "Kalenda"
     Dest.Biblia.route -> "Biblia"
     Dest.Watakatifu.route -> "Watakatifu"
+    Dest.Hifadhi.route -> "Yaliyohifadhiwa"
     else -> "LiturgX"
 }
 
@@ -188,7 +193,27 @@ fun LiturgXApp() {
                             SaintsScreen(saints = vm.saintsList())
                         }
                         composable(Dest.Biblia.route) {
-                            BibleScreen(currentColor = vm.selectedResult.resolved.color)
+                            BibleScreen(
+                                currentColor = vm.selectedResult.resolved.color,
+                                pendingJump = vm.pendingBibleJump,
+                                onJumpHandled = { vm.consumeBibleJump() }
+                            )
+                        }
+                        composable(Dest.Hifadhi.route) {
+                            val savedRepository = remember { BibleBrowseRepository(navController.context.applicationContext) }
+                            val savedBooks = remember { savedRepository.allBooks() }
+                            SavedScreen(
+                                books = savedBooks,
+                                color = vm.selectedResult.resolved.color,
+                                onSelectVerse = { bookId, chapterNum, verseNum ->
+                                    vm.requestBibleJump(bookId, chapterNum, verseNum)
+                                    navController.navigate(Dest.Biblia.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
+                            )
                         }
                     }
                 }

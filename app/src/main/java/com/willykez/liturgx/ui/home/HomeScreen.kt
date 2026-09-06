@@ -5,10 +5,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -17,11 +15,9 @@ import com.willykez.liturgx.data.DayResult
 import com.willykez.liturgx.data.ProgressStore
 import com.willykez.liturgx.data.bible.BibleRepository
 import com.willykez.liturgx.ui.components.DailyReadingsView
-import com.willykez.liturgx.ui.components.StreakCard
 import com.willykez.liturgx.ui.components.VerseOfTheDayCard
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.time.LocalDate
 
 private data class VerseOfDay(val citation: String, val text: String)
 
@@ -30,13 +26,12 @@ fun HomeScreen(todayResult: DayResult, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val progressStore = remember { ProgressStore(context) }
     val bibleRepository = remember { BibleRepository(context.applicationContext) }
-    var openedDates by remember { mutableStateOf<Set<LocalDate>>(emptySet()) }
 
     // Home only ever shows today, so viewing it IS "opened today's reading" -- the one event
-    // the streak feature cares about. Re-runs if the calendar day rolls over mid-session.
+    // the streak feature cares about. The streak card itself no longer shows on Home, but the
+    // underlying data still accumulates here in case it resurfaces elsewhere later.
     LaunchedEffect(todayResult.resolved.date) {
         progressStore.recordOpen(todayResult.resolved.date)
-        openedDates = progressStore.openedDates()
     }
 
     // Uses the day's Shangilio (Gospel Acclamation) citation, which is already a single short
@@ -64,11 +59,6 @@ fun HomeScreen(todayResult: DayResult, modifier: Modifier = Modifier) {
         dayResult = todayResult,
         extraHeaderContent = {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                StreakCard(
-                    openedDates = openedDates,
-                    today = todayResult.resolved.date,
-                    color = todayResult.resolved.color
-                )
                 verseOfDay?.let { verse ->
                     VerseOfTheDayCard(
                         citation = verse.citation,

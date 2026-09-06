@@ -182,6 +182,19 @@ class BibleBrowseRepository(private val context: Context) {
         }
     }
 
+    /** A single verse's text, or null if that address doesn't exist (e.g. stale saved data
+     *  from a Bible database that's since changed). Used by the Saved tab to render bookmarks/
+     *  highlights/notes, which only store the address, not a text snapshot. */
+    fun verseAt(bookId: Int, chapterNum: Int, position: Int): String? {
+        val db = BibleDatabaseHelper.getDatabase(context)
+        db.rawQuery(
+            "SELECT text FROM texts WHERE chapter_id = ? AND chapter_num = ? AND position = ? AND head = 0 LIMIT 1",
+            arrayOf(bookId.toString(), chapterNum.toString(), position.toString())
+        ).use { cursor ->
+            return if (cursor.moveToFirst()) BibleRepository.cleanVerseText(cursor.getString(0) ?: return null) else null
+        }
+    }
+
     private fun likePattern(term: String): String {
         val escaped = term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         return "%$escaped%"

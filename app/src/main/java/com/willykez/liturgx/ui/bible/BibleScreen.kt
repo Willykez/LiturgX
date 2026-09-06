@@ -14,6 +14,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -27,6 +28,7 @@ import com.willykez.liturgx.core.LiturgicalColor
 import com.willykez.liturgx.data.bible.BibleBookInfo
 import com.willykez.liturgx.data.bible.BibleBrowseRepository
 import com.willykez.liturgx.data.bible.Testament
+import com.willykez.liturgx.ui.BibleJumpTarget
 import com.willykez.liturgx.ui.theme.seasonAccent
 import com.willykez.liturgx.ui.theme.seasonAccentSoft
 
@@ -43,11 +45,28 @@ private sealed class BibleRoute {
 }
 
 @Composable
-fun BibleScreen(currentColor: LiturgicalColor, modifier: Modifier = Modifier) {
+fun BibleScreen(
+    currentColor: LiturgicalColor,
+    pendingJump: BibleJumpTarget? = null,
+    onJumpHandled: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
     val context = LocalContext.current
     val repository = remember { BibleBrowseRepository(context.applicationContext) }
     val books = remember { repository.allBooks() }
     var route by remember { mutableStateOf<BibleRoute>(BibleRoute.Books) }
+
+    // A bookmark/highlight/note tapped on the Saved tab arrives here as a plain address
+    // (bookId/chapter/verse) rather than a BibleRoute, since Saved has no reason to know about
+    // this tab's internal route type -- resolve it to a BibleBookInfo and jump straight to it.
+    LaunchedEffect(pendingJump) {
+        val jump = pendingJump ?: return@LaunchedEffect
+        val book = books.firstOrNull { it.id == jump.bookId }
+        if (book != null) {
+            route = BibleRoute.Reader(book, jump.chapterNum, jump.verseNum)
+        }
+        onJumpHandled()
+    }
 
     Box(modifier.fillMaxSize()) {
         when (val r = route) {

@@ -16,6 +16,9 @@ import com.willykez.liturgx.notifications.VerseReminderReceiver
 import com.willykez.liturgx.ui.theme.ThemeMode
 import java.time.LocalDate
 
+/** A single verse address to open directly in the Bible tab -- see [LectionaryViewModel.requestBibleJump]. */
+data class BibleJumpTarget(val bookId: Int, val chapterNum: Int, val verseNum: Int)
+
 class LectionaryViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repository = LectionaryRepository(app)
@@ -129,4 +132,18 @@ class LectionaryViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun saintsList() = repository.allSaints()
+
+    /** Set by the Saved tab (tapping a bookmark/highlight/note); read once by the Bible tab's
+     *  [com.willykez.liturgx.ui.bible.BibleScreen], which calls [consumeBibleJump] right after
+     *  navigating to it so re-entering the Bible tab later doesn't jump again unprompted. */
+    var pendingBibleJump by mutableStateOf<BibleJumpTarget?>(null)
+        private set
+
+    fun requestBibleJump(bookId: Int, chapterNum: Int, verseNum: Int) {
+        pendingBibleJump = BibleJumpTarget(bookId, chapterNum, verseNum)
+    }
+
+    fun consumeBibleJump() {
+        pendingBibleJump = null
+    }
 }

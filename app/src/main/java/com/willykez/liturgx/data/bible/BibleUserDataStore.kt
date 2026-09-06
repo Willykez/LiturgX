@@ -32,6 +32,9 @@ class BibleUserDataStore(context: Context) {
         prefs.edit().putStringSet(KEY_BOOKMARKS, emptySet()).apply()
     }
 
+    /** All bookmarked verse keys, for the Saved tab's listing. */
+    fun allBookmarkKeys(): Set<String> = bookmarkKeys()
+
     private fun bookmarkKeys(): Set<String> = prefs.getStringSet(KEY_BOOKMARKS, emptySet()) ?: emptySet()
 
     // --- Highlights ------------------------------------------------------------------
@@ -48,6 +51,9 @@ class BibleUserDataStore(context: Context) {
     fun clearHighlights() {
         prefs.edit().putStringSet(KEY_HIGHLIGHTS, emptySet()).apply()
     }
+
+    /** All highlighted verse keys, for the Saved tab's listing. */
+    fun allHighlightKeys(): Set<String> = highlightKeys()
 
     private fun highlightKeys(): Set<String> = prefs.getStringSet(KEY_HIGHLIGHTS, emptySet()) ?: emptySet()
 
@@ -76,6 +82,9 @@ class BibleUserDataStore(context: Context) {
     }
 
     fun noteCount(): Int = noteKeys().size
+
+    /** All verse-key -> note-text pairs, for the Saved tab's listing. */
+    fun allNotes(): Map<String, String> = noteKeys().associateWith { getNote(it) ?: "" }
 
     fun clearNotes() {
         val editor = prefs.edit()
