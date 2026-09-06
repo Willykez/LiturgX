@@ -87,10 +87,10 @@ import java.io.File
  * citation shape like "Zaburi 33:12-13, 18-19, 20-21" (several separate verse groups, not one
  * span) is directly reachable by tapping exactly those verses. [groupIntoRanges] does the
  * merging; nothing about it is order-dependent, so deselecting and re-selecting verses always
- * settles into the same minimal citation. Selection actions live in a persistent toolbar right
- * below the chapter header (not one that jumps to whichever verse was tapped last), so they
- * stay reachable even after scrolling the selected verse out of view. A long-press on a verse
- * toggles it too, alongside the plain tap, matching the platform's usual text-selection gesture.
+ * settles into the same minimal citation. The action row expands/collapses in place right under
+ * whichever verse was tapped most recently, with the same fade+expand transition as the
+ * original single-verse version -- now carrying a verse count, a clear-selection button, and
+ * bookmark/highlight/note actions alongside the existing copy/share ones.
  *
  * Reading preferences (font style, verse numbers, paragraph mode) and the bookmark/highlight/
  * note actions in the selection row are read straight from [ReadingPrefsStore] and
@@ -205,81 +205,6 @@ fun ChapterReaderScreen(
             }
         }
 
-        // A persistent toolbar (not one that appears/disappears next to whichever verse was
-        // tapped last) so the actions stay reachable even after scrolling the selection out of
-        // view -- and so it reads as one coherent "you're in selection mode" state rather than
-        // a row that jumps around the screen as different verses are tapped.
-        AnimatedVisibility(
-            visible = selectionCitation != null,
-            enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically()
-        ) {
-            if (selectionCitation != null) {
-                SelectionActionRow(
-                    citation = selectionCitation,
-                    verseCount = selectedVerses.size,
-                    text = selectionText,
-                    isPreparingPdf = isPreparingPdf,
-                    isBookmarked = allSelectedBookmarked,
-                    isHighlighted = allSelectedHighlighted,
-                    accent = accent,
-                    onBg = onBg,
-                    onBgDim = onBgDim,
-                    onClear = { selectedVerses = emptySet(); lastTappedVerse = null },
-                    onCopy = {
-                        val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        cm.setPrimaryClip(ClipData.newPlainText("Andiko", "$selectionCitation\n\n$selectionText"))
-                    },
-                    onShareText = {
-                        val intent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, "$selectionCitation\n\n$selectionText\n\nImetumwa kutoka LiturgX")
-                        }
-                        context.startActivity(Intent.createChooser(intent, "Shiriki Andiko"))
-                    },
-                    onShareImage = { showImageShare = true },
-                    onSharePdf = {
-                        if (!isPreparingPdf) {
-                            isPreparingPdf = true
-                            scope.launch {
-                                val citation = selectionCitation
-                                val file = withContext(Dispatchers.IO) {
-                                    DailyReadingPdfGenerator.generate(
-                                        context = context,
-                                        dateText = book.name,
-                                        seasonText = "BIBLIA",
-                                        color = color,
-                                        readings = listOf(
-                                            DayCardReading(
-                                                kindLabel = "Andiko",
-                                                citation = citation,
-                                                passageText = selectionText,
-                                                responseText = null
-                                            )
-                                        )
-                                    )
-                                }
-                                isPreparingPdf = false
-                                pdfFile = file
-                                showPdfPreview = true
-                            }
-                        }
-                    },
-                    onToggleBookmark = {
-                        val makeBookmarked = !allSelectedBookmarked
-                        selectedVerses.forEach { pos -> userData.setBookmarked(keyFor(pos), makeBookmarked) }
-                        userDataVersion++
-                    },
-                    onToggleHighlight = {
-                        val makeHighlighted = !allSelectedHighlighted
-                        selectedVerses.forEach { pos -> userData.setHighlighted(keyFor(pos), makeHighlighted) }
-                        userDataVersion++
-                    },
-                    onAddNote = { showNoteDialog = true }
-                )
-            }
-        }
-
         LazyColumn(
             state = listState,
             modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -297,21 +222,98 @@ fun ChapterReaderScreen(
                     )
                 } else {
                     val key = keyFor(line.position)
-                    VerseLine(
-                        line = line,
-                        emphasized = (scrollToVerse != null && line.position == scrollToVerse) ||
-                            line.position in selectedVerses,
-                        isHighlighted = userDataVersion.let { userData.isHighlighted(key) },
-                        isBookmarked = userDataVersion.let { userData.isBookmarked(key) },
-                        hasNote = userDataVersion.let { userData.getNote(key) != null },
-                        showVerseNumber = verseNumbersVisible,
-                        paragraphMode = paragraphMode,
-                        scriptureFont = scriptureFont,
-                        accent = accent,
-                        onBg = onBg,
-                        onTap = { toggleVerse(line.position) },
-                        onLongPress = { toggleVerse(line.position) }
-                    )
+                    Column {
+                        VerseLine(
+                            line = line,
+                            emphasized = (scrollToVerse != null && line.position == scrollToVerse) ||
+                                line.position in selectedVerses,
+                            isHighlighted = userDataVersion.let { userData.isHighlighted(key) },
+                            isBookmarked = userDataVersion.let { userData.isBookmarked(key) },
+                            hasNote = userDataVersion.let { userData.getNote(key) != null },
+                            showVerseNumber = verseNumbersVisible,
+                            paragraphMode = paragraphMode,
+                            scriptureFont = scriptureFont,
+                            accent = accent,
+                            onBg = onBg,
+                            onTap = { toggleVerse(line.position) },
+                            onLongPress = { toggleVerse(line.position) }
+                        )
+                        // Right back where it was before: the action row expands/collapses in
+                        // place under whichever verse was tapped most recently, rather than
+                        // living in a fixed toolbar -- that's the transition you liked. It keeps
+                        // the newer additions (clear button, verse count, bookmark/highlight/
+                        // note) that the fixed-toolbar experiment added along the way.
+                        AnimatedVisibility(
+                            visible = lastTappedVerse == line.position && selectionCitation != null,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
+                        ) {
+                            if (selectionCitation != null) {
+                                SelectionActionRow(
+                                    citation = selectionCitation,
+                                    verseCount = selectedVerses.size,
+                                    text = selectionText,
+                                    isPreparingPdf = isPreparingPdf,
+                                    isBookmarked = allSelectedBookmarked,
+                                    isHighlighted = allSelectedHighlighted,
+                                    accent = accent,
+                                    onBg = onBg,
+                                    onBgDim = onBgDim,
+                                    onClear = { selectedVerses = emptySet(); lastTappedVerse = null },
+                                    onCopy = {
+                                        val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                        cm.setPrimaryClip(ClipData.newPlainText("Andiko", "$selectionCitation\n\n$selectionText"))
+                                    },
+                                    onShareText = {
+                                        val intent = Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(Intent.EXTRA_TEXT, "$selectionCitation\n\n$selectionText\n\nImetumwa kutoka LiturgX")
+                                        }
+                                        context.startActivity(Intent.createChooser(intent, "Shiriki Andiko"))
+                                    },
+                                    onShareImage = { showImageShare = true },
+                                    onSharePdf = {
+                                        if (!isPreparingPdf) {
+                                            isPreparingPdf = true
+                                            scope.launch {
+                                                val citation = selectionCitation
+                                                val file = withContext(Dispatchers.IO) {
+                                                    DailyReadingPdfGenerator.generate(
+                                                        context = context,
+                                                        dateText = book.name,
+                                                        seasonText = "BIBLIA",
+                                                        color = color,
+                                                        readings = listOf(
+                                                            DayCardReading(
+                                                                kindLabel = "Andiko",
+                                                                citation = citation,
+                                                                passageText = selectionText,
+                                                                responseText = null
+                                                            )
+                                                        )
+                                                    )
+                                                }
+                                                isPreparingPdf = false
+                                                pdfFile = file
+                                                showPdfPreview = true
+                                            }
+                                        }
+                                    },
+                                    onToggleBookmark = {
+                                        val makeBookmarked = !allSelectedBookmarked
+                                        selectedVerses.forEach { pos -> userData.setBookmarked(keyFor(pos), makeBookmarked) }
+                                        userDataVersion++
+                                    },
+                                    onToggleHighlight = {
+                                        val makeHighlighted = !allSelectedHighlighted
+                                        selectedVerses.forEach { pos -> userData.setHighlighted(keyFor(pos), makeHighlighted) }
+                                        userDataVersion++
+                                    },
+                                    onAddNote = { showNoteDialog = true }
+                                )
+                            }
+                        }
+                    }
                 }
             }
             item { Spacer(Modifier.height(24.dp)) }
@@ -466,63 +468,56 @@ private fun SelectionActionRow(
     onToggleHighlight: () -> Unit,
     onAddNote: () -> Unit
 ) {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .background(accent.copy(alpha = 0.08f))
-            .padding(horizontal = 16.dp, vertical = 10.dp)
-    ) {
+    Column(Modifier.padding(start = 26.dp, end = 4.dp, top = 2.dp, bottom = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(citation, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = accent)
-                Text(
-                    if (verseCount == 1) "Mstari 1 umechaguliwa" else "Mistari $verseCount imechaguliwa",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = onBgDim
-                )
+                Text(citation, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = accent)
+                if (verseCount > 1) {
+                    Text("Mistari $verseCount imechaguliwa", style = MaterialTheme.typography.labelSmall, color = onBgDim)
+                }
             }
             IconButton(onClick = onClear, modifier = Modifier.size(28.dp)) {
-                Icon(Icons.Filled.Close, contentDescription = "Ondoa uchaguzi", tint = onBgDim, modifier = Modifier.size(18.dp))
+                Icon(Icons.Filled.Close, contentDescription = "Ondoa uchaguzi", tint = onBgDim, modifier = Modifier.size(16.dp))
             }
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(4.dp))
         Row(
             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            IconButton(onClick = onToggleBookmark, modifier = Modifier.size(36.dp)) {
+            IconButton(onClick = onToggleBookmark, modifier = Modifier.size(32.dp)) {
                 Icon(
                     if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
                     contentDescription = if (isBookmarked) "Ondoa alama" else "Weka alama",
-                    tint = if (isBookmarked) accent else onBg,
-                    modifier = Modifier.size(18.dp)
+                    tint = if (isBookmarked) accent else onBgDim,
+                    modifier = Modifier.size(16.dp)
                 )
             }
-            IconButton(onClick = onToggleHighlight, modifier = Modifier.size(36.dp)) {
+            IconButton(onClick = onToggleHighlight, modifier = Modifier.size(32.dp)) {
                 Icon(
                     Icons.Filled.Highlight,
                     contentDescription = if (isHighlighted) "Ondoa mwangaza" else "Angazia",
-                    tint = if (isHighlighted) accent else onBg,
-                    modifier = Modifier.size(18.dp)
+                    tint = if (isHighlighted) accent else onBgDim,
+                    modifier = Modifier.size(16.dp)
                 )
             }
-            IconButton(onClick = onAddNote, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Outlined.NoteAlt, contentDescription = "Ongeza dokezo", tint = onBg, modifier = Modifier.size(18.dp))
+            IconButton(onClick = onAddNote, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.Outlined.NoteAlt, contentDescription = "Ongeza dokezo", tint = onBgDim, modifier = Modifier.size(16.dp))
             }
-            IconButton(onClick = onCopy, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Filled.ContentCopy, contentDescription = "Nakili", tint = onBg, modifier = Modifier.size(18.dp))
+            IconButton(onClick = onCopy, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.Filled.ContentCopy, contentDescription = "Nakili", tint = onBgDim, modifier = Modifier.size(16.dp))
             }
-            IconButton(onClick = onShareText, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Filled.IosShare, contentDescription = "Shiriki kama maandishi", tint = onBg, modifier = Modifier.size(18.dp))
+            IconButton(onClick = onShareText, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.Filled.IosShare, contentDescription = "Shiriki kama maandishi", tint = onBgDim, modifier = Modifier.size(16.dp))
             }
-            IconButton(onClick = onShareImage, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Outlined.Image, contentDescription = "Shiriki kama picha", tint = onBg, modifier = Modifier.size(18.dp))
+            IconButton(onClick = onShareImage, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.Outlined.Image, contentDescription = "Shiriki kama picha", tint = onBgDim, modifier = Modifier.size(16.dp))
             }
-            IconButton(onClick = onSharePdf, enabled = !isPreparingPdf, modifier = Modifier.size(36.dp)) {
+            IconButton(onClick = onSharePdf, enabled = !isPreparingPdf, modifier = Modifier.size(32.dp)) {
                 if (isPreparingPdf) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = accent)
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = accent)
                 } else {
-                    Icon(Icons.Filled.PictureAsPdf, contentDescription = "Hifadhi kama PDF", tint = onBg, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Filled.PictureAsPdf, contentDescription = "Hifadhi kama PDF", tint = onBgDim, modifier = Modifier.size(16.dp))
                 }
             }
         }
