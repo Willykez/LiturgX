@@ -16,19 +16,28 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Highlight
 import androidx.compose.material.icons.filled.IosShare
+import androidx.compose.material.icons.filled.NoteAlt
 import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.NoteAlt
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -41,13 +50,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.willykez.liturgx.core.LiturgicalColor
 import com.willykez.liturgx.data.bible.BibleBookInfo
 import com.willykez.liturgx.data.bible.BibleBrowseRepository
+import com.willykez.liturgx.data.bible.BibleUserDataStore
 import com.willykez.liturgx.data.bible.ChapterLine
+import com.willykez.liturgx.data.bible.ReadingPrefsStore
+import com.willykez.liturgx.data.bible.ScriptureFontStyle
+import com.willykez.liturgx.data.bible.verseKey
 import com.willykez.liturgx.data.sharing.DailyReadingPdfGenerator
 import com.willykez.liturgx.data.sharing.DayCardReading
 import com.willykez.liturgx.ui.components.PdfPreviewDialog
@@ -70,6 +84,11 @@ import java.io.File
  * merging; nothing about it is order-dependent, so deselecting and re-selecting verses always
  * settles into the same minimal citation. The action row appears inline, right under whichever
  * verse was tapped most recently -- same placement as the single-verse version had.
+ *
+ * Reading preferences (font style, verse numbers, paragraph mode) and the bookmark/highlight/
+ * note actions in the selection row are read straight from [ReadingPrefsStore] and
+ * [BibleUserDataStore] on every recomposition -- deliberately not lifted into a ViewModel, to
+ * match this screen's existing lightweight, store-backed state style (see [BibleScreen]'s doc).
  */
 @Composable
 fun ChapterReaderScreen(
@@ -90,12 +109,27 @@ fun ChapterReaderScreen(
     val lines = remember(book.id, chapterNum) { repository.chapter(book.id, chapterNum) }
     val listState = rememberLazyListState()
 
+    val readingPrefs = remember { ReadingPrefsStore(context) }
+    val userData = remember { BibleUserDataStore(context) }
+    val fontStyle = readingPrefs.loadFontStyle()
+    val verseNumbersVisible = readingPrefs.loadVerseNumbersVisible()
+    val paragraphMode = readingPrefs.loadParagraphMode()
+    val scriptureFont = when (fontStyle) {
+        ScriptureFontStyle.SERIF -> FontFamily.Serif
+        ScriptureFontStyle.SANS -> FontFamily.SansSerif
+        ScriptureFontStyle.MONO -> FontFamily.Monospace
+    }
+
     var selectedVerses by remember(book.id, chapterNum) { mutableStateOf<Set<Int>>(emptySet()) }
     var lastTappedVerse by remember(book.id, chapterNum) { mutableStateOf<Int?>(null) }
     var isPreparingPdf by remember { mutableStateOf(false) }
     var showImageShare by remember { mutableStateOf(false) }
     var pdfFile by remember { mutableStateOf<File?>(null) }
     var showPdfPreview by remember { mutableStateOf(false) }
+    var showNoteDialog by remember { mutableStateOf(false) }
+    // Bumped after any bookmark/highlight/note write so the rows relying on the store recompose
+    // (SharedPreferences reads aren't observable to Compose on their own).
+    var userDataVersion by remember { mutableStateOf(0) }
 
     LaunchedEffect(book.id, chapterNum, scrollToVerse) {
         selectedVerses = emptySet()
@@ -113,6 +147,8 @@ fun ChapterReaderScreen(
         lastTappedVerse = if (selectedVerses.isEmpty()) null else position
     }
 
+    fun keyFor(position: Int) = verseKey(book.id, chapterNum, position)
+
     val selectionGroups = remember(selectedVerses) {
         groupIntoRanges(selectedVerses).map { range -> lines.filter { !it.isHeading && it.position in range } }
     }
@@ -122,6 +158,12 @@ fun ChapterReaderScreen(
     }
     val selectionCitation = remember(selectedVerses) {
         citationFor(book.name, chapterNum, selectedVerses)
+    }
+    val allSelectedBookmarked = userDataVersion.let {
+        selectedVerses.isNotEmpty() && selectedVerses.all { pos -> userData.isBookmarked(keyFor(pos)) }
+    }
+    val allSelectedHighlighted = userDataVersion.let {
+        selectedVerses.isNotEmpty() && selectedVerses.all { pos -> userData.isHighlighted(keyFor(pos)) }
     }
 
     Column(Modifier.fillMaxSize().padding(top = 8.dp)) {
@@ -158,7 +200,7 @@ fun ChapterReaderScreen(
             state = listState,
             modifier = Modifier.weight(1f).fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
+            verticalArrangement = Arrangement.spacedBy(if (paragraphMode) 0.dp else 2.dp)
         ) {
             items(lines) { line ->
                 if (line.isHeading) {
@@ -170,11 +212,18 @@ fun ChapterReaderScreen(
                         modifier = Modifier.padding(top = 14.dp, bottom = 6.dp)
                     )
                 } else {
+                    val key = keyFor(line.position)
                     Column {
                         VerseLine(
                             line = line,
                             emphasized = (scrollToVerse != null && line.position == scrollToVerse) ||
                                 line.position in selectedVerses,
+                            isHighlighted = userDataVersion.let { userData.isHighlighted(key) },
+                            isBookmarked = userDataVersion.let { userData.isBookmarked(key) },
+                            hasNote = userDataVersion.let { userData.getNote(key) != null },
+                            showVerseNumber = verseNumbersVisible,
+                            paragraphMode = paragraphMode,
+                            scriptureFont = scriptureFont,
                             accent = accent,
                             onBg = onBg,
                             onTap = { toggleVerse(line.position) }
@@ -189,6 +238,8 @@ fun ChapterReaderScreen(
                                     citation = selectionCitation,
                                     text = selectionText,
                                     isPreparingPdf = isPreparingPdf,
+                                    isBookmarked = allSelectedBookmarked,
+                                    isHighlighted = allSelectedHighlighted,
                                     accent = accent,
                                     onBgDim = onBgDim,
                                     onCopy = {
@@ -229,7 +280,18 @@ fun ChapterReaderScreen(
                                                 showPdfPreview = true
                                             }
                                         }
-                                    }
+                                    },
+                                    onToggleBookmark = {
+                                        val makeBookmarked = !allSelectedBookmarked
+                                        selectedVerses.forEach { pos -> userData.setBookmarked(keyFor(pos), makeBookmarked) }
+                                        userDataVersion++
+                                    },
+                                    onToggleHighlight = {
+                                        val makeHighlighted = !allSelectedHighlighted
+                                        selectedVerses.forEach { pos -> userData.setHighlighted(keyFor(pos), makeHighlighted) }
+                                        userDataVersion++
+                                    },
+                                    onAddNote = { showNoteDialog = true }
                                 )
                             }
                         }
@@ -259,6 +321,20 @@ fun ChapterReaderScreen(
             file = currentPdfFile,
             color = color,
             onDismiss = { showPdfPreview = false }
+        )
+    }
+
+    val noteVerse = lastTappedVerse
+    if (showNoteDialog && noteVerse != null) {
+        NoteDialog(
+            initialText = userData.getNote(keyFor(noteVerse)) ?: "",
+            accent = accent,
+            onDismiss = { showNoteDialog = false },
+            onSave = { text ->
+                userData.setNote(keyFor(noteVerse), text)
+                userDataVersion++
+                showNoteDialog = false
+            }
         )
     }
 }
@@ -296,32 +372,60 @@ private fun citationFor(bookName: String, chapterNum: Int, positions: Set<Int>):
 private fun VerseLine(
     line: ChapterLine,
     emphasized: Boolean,
+    isHighlighted: Boolean,
+    isBookmarked: Boolean,
+    hasNote: Boolean,
+    showVerseNumber: Boolean,
+    paragraphMode: Boolean,
+    scriptureFont: FontFamily,
     accent: Color,
     onBg: Color,
     onTap: () -> Unit
 ) {
+    // Highlight always shows (a persistent mark); emphasized (tap-selected / scrolled-to) layers
+    // the accent tint on top of it so a highlighted verse that's also selected still reads clearly.
+    val background = when {
+        emphasized -> accent.copy(alpha = 0.16f)
+        isHighlighted -> accent.copy(alpha = 0.22f)
+        else -> Color.Transparent
+    }
     Row(
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(if (emphasized) accent.copy(alpha = 0.16f) else Color.Transparent)
+            .background(background)
             .clickable(onClick = onTap)
-            .padding(vertical = 3.dp, horizontal = if (emphasized) 6.dp else 0.dp)
+            .padding(
+                vertical = if (paragraphMode) 1.dp else 3.dp,
+                horizontal = if (emphasized || isHighlighted) 6.dp else 0.dp
+            )
     ) {
-        Text(
-            line.position.toString(),
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-            color = accent,
-            modifier = Modifier
-                .padding(top = 4.dp, end = 6.dp)
-                .width(20.dp)
-        )
+        if (showVerseNumber && !paragraphMode) {
+            Text(
+                line.position.toString(),
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                color = accent,
+                modifier = Modifier
+                    .padding(top = 4.dp, end = 6.dp)
+                    .width(20.dp)
+            )
+        }
         Text(
             line.text,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.bodyLarge.copy(fontFamily = scriptureFont),
             color = onBg,
             modifier = Modifier.weight(1f)
         )
+        if (isBookmarked || hasNote) {
+            Row(modifier = Modifier.padding(start = 4.dp, top = 4.dp)) {
+                if (isBookmarked) {
+                    Icon(Icons.Filled.Bookmark, contentDescription = "Imewekwa alama", tint = accent, modifier = Modifier.size(14.dp))
+                }
+                if (hasNote) {
+                    Icon(Icons.Filled.NoteAlt, contentDescription = "Ina dokezo", tint = accent, modifier = Modifier.size(14.dp).padding(start = 2.dp))
+                }
+            }
+        }
     }
 }
 
@@ -330,17 +434,41 @@ private fun SelectionActionRow(
     citation: String,
     text: String,
     isPreparingPdf: Boolean,
+    isBookmarked: Boolean,
+    isHighlighted: Boolean,
     accent: Color,
     onBgDim: Color,
     onCopy: () -> Unit,
     onShareText: () -> Unit,
     onShareImage: () -> Unit,
-    onSharePdf: () -> Unit
+    onSharePdf: () -> Unit,
+    onToggleBookmark: () -> Unit,
+    onToggleHighlight: () -> Unit,
+    onAddNote: () -> Unit
 ) {
     Column(Modifier.padding(start = 26.dp, top = 2.dp, bottom = 8.dp)) {
         Text(citation, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = accent)
         Spacer(Modifier.height(4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            IconButton(onClick = onToggleBookmark, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                    contentDescription = if (isBookmarked) "Ondoa alama" else "Weka alama",
+                    tint = if (isBookmarked) accent else onBgDim,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+            IconButton(onClick = onToggleHighlight, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    Icons.Filled.Highlight,
+                    contentDescription = if (isHighlighted) "Ondoa mwangaza" else "Angazia",
+                    tint = if (isHighlighted) accent else onBgDim,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+            IconButton(onClick = onAddNote, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.Outlined.NoteAlt, contentDescription = "Ongeza dokezo", tint = onBgDim, modifier = Modifier.size(16.dp))
+            }
             IconButton(onClick = onCopy, modifier = Modifier.size(32.dp)) {
                 Icon(Icons.Filled.ContentCopy, contentDescription = "Nakili", tint = onBgDim, modifier = Modifier.size(16.dp))
             }
@@ -359,4 +487,37 @@ private fun SelectionActionRow(
             }
         }
     }
+}
+
+@Composable
+private fun NoteDialog(
+    initialText: String,
+    accent: Color,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit
+) {
+    var text by remember { mutableStateOf(initialText) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Dokezo") },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                placeholder = { Text("Andika dokezo lako kuhusu mstari huu...") },
+                keyboardOptions = KeyboardOptions.Default,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(text) }) {
+                Text("Hifadhi", color = accent)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Ghairi")
+            }
+        }
+    )
 }

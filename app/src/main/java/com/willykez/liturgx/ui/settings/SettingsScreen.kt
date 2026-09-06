@@ -6,6 +6,11 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -47,6 +52,9 @@ import androidx.core.content.ContextCompat
 import com.willykez.liturgx.core.EpiphanyMode
 import com.willykez.liturgx.core.LiturgicalColor
 import com.willykez.liturgx.core.RegionSettings
+import com.willykez.liturgx.data.bible.BibleUserDataStore
+import com.willykez.liturgx.data.bible.ReadingPrefsStore
+import com.willykez.liturgx.data.bible.ScriptureFontStyle
 import com.willykez.liturgx.data.sharing.PdfShareUtils
 import com.willykez.liturgx.data.sharing.YearlyLectionaryPdfGenerator
 import com.willykez.liturgx.ui.components.DividedRow
@@ -98,6 +106,20 @@ fun SettingsSheetContent(
         TimePickerDialog(context, { _, h, m -> onPicked(h, m) }, hour, minute, true).show()
     }
 
+    // Bible reading preferences and saved-data counts (bookmarks/highlights/notes) - these
+    // live in their own small stores (see ReadingPrefsStore, BibleUserDataStore) rather than
+    // the LectionaryViewModel above, since they're specific to the Bible tab. Local state here
+    // just mirrors what's on disk so the sheet reflects changes immediately.
+    val readingPrefs = remember { ReadingPrefsStore(context) }
+    val bibleUserData = remember { BibleUserDataStore(context) }
+    var fontStyle by remember { mutableStateOf(readingPrefs.loadFontStyle()) }
+    var verseNumbersVisible by remember { mutableStateOf(readingPrefs.loadVerseNumbersVisible()) }
+    var paragraphMode by remember { mutableStateOf(readingPrefs.loadParagraphMode()) }
+    var dataVersion by remember { mutableStateOf(0) }
+    var clearBookmarksExpanded by remember { mutableStateOf(false) }
+    var clearHighlightsExpanded by remember { mutableStateOf(false) }
+    var clearNotesExpanded by remember { mutableStateOf(false) }
+
     Column(modifier.fillMaxWidth().fillMaxHeight(0.92f)) {
         // Header: plain title + subtitle, hairline rule beneath - same anatomy as every
         // other top-of-screen header in the app now, not a one-off bespoke row.
@@ -121,6 +143,64 @@ fun SettingsSheetContent(
         HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
 
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+            // --- USOMAJI (Bible reading preferences) --------------------------------
+            SectionLabel("USOMAJI")
+            DividedRow {
+                SettingsRow(
+                    title = "Namba za mstari",
+                    subtitle = "Onyesha namba ya kila mstari katika Biblia",
+                ) {
+                    Switch(
+                        checked = verseNumbersVisible,
+                        onCheckedChange = {
+                            verseNumbersVisible = it
+                            readingPrefs.saveVerseNumbersVisible(it)
+                        },
+                        colors = SwitchDefaults.colors(checkedTrackColor = accent),
+                    )
+                }
+            }
+            DividedRow {
+                Column(Modifier.padding(horizontal = 20.dp, vertical = 14.dp)) {
+                    Text("Aina ya maandishi", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onBackground)
+                    Spacer(Modifier.height(10.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                        listOf(
+                            ScriptureFontStyle.SERIF to "Klasiki",
+                            ScriptureFontStyle.SANS to "Rahisi",
+                            ScriptureFontStyle.MONO to "Namba",
+                        ).forEach { (style, label) ->
+                            val selected = style == fontStyle
+                            Text(
+                                label,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = if (selected) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.clickable {
+                                    fontStyle = style
+                                    readingPrefs.saveFontStyle(style)
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+            DividedRow(showDivider = false) {
+                SettingsRow(
+                    title = "Hali ya kusoma: Aya",
+                    subtitle = "Onyesha kama kitabu, si mstari kwa mstari",
+                ) {
+                    Switch(
+                        checked = paragraphMode,
+                        onCheckedChange = {
+                            paragraphMode = it
+                            readingPrefs.saveParagraphMode(it)
+                        },
+                        colors = SwitchDefaults.colors(checkedTrackColor = accent),
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
             // --- UKUMBUSHO ---------------------------------------------------------
             SectionLabel("UKUMBUSHO")
             DividedRow {
@@ -227,6 +307,33 @@ fun SettingsSheetContent(
                     Spacer(Modifier.height(10.dp))
                     YearlyPdfExportButton(region = region, accent = accent)
                 }
+            }
+
+            // --- DATA YAKO (bookmarks / highlights / notes from the Bible tab) ------
+            Spacer(Modifier.height(12.dp))
+            SectionLabel("DATA YAKO")
+            dataVersion.let {
+                ClearableDataRow(
+                    title = "Alama",
+                    subtitle = "${bibleUserData.bookmarkCount()} mstari umewekwa alama",
+                    expanded = clearBookmarksExpanded,
+                    onToggleExpanded = { clearBookmarksExpanded = !clearBookmarksExpanded },
+                    onConfirmClear = { bibleUserData.clearBookmarks(); clearBookmarksExpanded = false; dataVersion++ },
+                )
+                ClearableDataRow(
+                    title = "Iliyoangaziwa",
+                    subtitle = "${bibleUserData.highlightCount()} mstari umeangaziwa",
+                    expanded = clearHighlightsExpanded,
+                    onToggleExpanded = { clearHighlightsExpanded = !clearHighlightsExpanded },
+                    onConfirmClear = { bibleUserData.clearHighlights(); clearHighlightsExpanded = false; dataVersion++ },
+                )
+                ClearableDataRow(
+                    title = "Dokezo",
+                    subtitle = "${bibleUserData.noteCount()} dokezo limehifadhiwa",
+                    expanded = clearNotesExpanded,
+                    onToggleExpanded = { clearNotesExpanded = !clearNotesExpanded },
+                    onConfirmClear = { bibleUserData.clearNotes(); clearNotesExpanded = false; dataVersion++ },
+                )
             }
 
             // --- KUHUSU --------------------------------------------------------------
@@ -339,5 +446,37 @@ private fun YearlyPdfExportButton(region: RegionSettings, accent: Color) {
     errorMessage?.let {
         Spacer(Modifier.height(6.dp))
         Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.error)
+    }
+}
+
+/** "Futa Alama/Iliyoangaziwa/Dokezo" row - ported from BibliaApp's DATA YAKO pattern: tap the
+ *  row to reveal a confirm button, rather than clearing on the first tap. */
+@Composable
+private fun ClearableDataRow(
+    title: String,
+    subtitle: String,
+    expanded: Boolean,
+    onToggleExpanded: () -> Unit,
+    onConfirmClear: () -> Unit,
+) {
+    DividedRow {
+        Column {
+            SettingsRow(
+                title = "Futa $title",
+                subtitle = subtitle,
+                titleColor = MaterialTheme.colorScheme.error,
+                onClick = onToggleExpanded,
+            )
+            AnimatedVisibility(visible = expanded, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 12.dp),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    OutlinedButton(onClick = onConfirmClear) {
+                        Text("Thibitisha")
+                    }
+                }
+            }
+        }
     }
 }
