@@ -373,3 +373,23 @@ alongside the swipe gesture, and the relative-day text line became a compact dat
 summary row -- which meant giving `DailyReadingsView` a `showHeader` flag so its own date/title
 block doesn't duplicate right underneath the new summary; `HomeScreen` still uses the default
 (`true`), only `CalendarScreen` opts out.
+
+## CI: signed release builds via GitHub Actions
+
+`.github/workflows/release.yml` builds a signed release APK + AAB using four repository
+secrets: `KEYSTORE_B64`, `KEY_ALIAS`, `KEY_PASSWORD`, `STORE_PASSWORD`. Push a tag like `v1.1`
+to also cut a GitHub Release with both files attached, or run the workflow manually
+(Actions tab → "Signed Release Build" → "Run workflow") any time to just get the signed
+APK/AAB as a downloadable build artifact.
+
+`app/build.gradle.kts`'s `signingConfigs.release` block reads all four values from environment
+variables (`KEYSTORE_PATH` + the three secrets above) via `System.getenv(...)` — nothing about
+the real keystore or its passwords is ever written to source control. Locally, those env vars
+are simply unset, so `assembleRelease` stays unsigned rather than failing; the release build
+type only attaches the signing config when `KEYSTORE_PATH` is actually present.
+
+**If you ever need to regenerate `KEYSTORE_B64`** (e.g. after rotating the keystore): it's your
+existing `.jks`/`.keystore` file, base64-encoded onto one line —
+`base64 -w0 your-release-key.jks` on Linux, or `base64 -i your-release-key.jks | tr -d '\n'` on
+macOS — then paste that whole string as the `KEYSTORE_B64` secret's value. The other three
+secrets are just the alias/passwords you set when the keystore was created.

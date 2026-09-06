@@ -1,18 +1,22 @@
-name: Build Release APK
+name: Signed Release Build
 
+# Builds a signed release APK + AAB using the four repository secrets already configured
+# (KEYSTORE_B64, KEY_ALIAS, KEY_PASSWORD, STORE_PASSWORD):
+#   - Push a tag like "v1.1" to build + publish a GitHub Release with the signed files attached.
+#   - Or run it manually from the Actions tab (workflow_dispatch) any time -- the signed
+#     APK/AAB is still attached to the run as a downloadable artifact either way, tag or not.
 on:
   push:
-    branches:
-      - main
+    tags:
+      - "v*"
+  workflow_dispatch: {}
 
-concurrency:
-  group: build-release
-  cancel-in-progress: false
+permissions:
+  contents: write # only needed for the tag-triggered "create a Release" step
 
 jobs:
-  build:
+  build-signed:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,31 +24,71 @@ jobs:
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
-          distribution: 'temurin'
-          cache: gradle
+          distribution: temurin
+          java-version: "17"
 
-      - name: Grant execute permission to gradlew
-        run: chmod +x gradlew
+      - name: Cache Gradle
+        uses: gradle/actions/setup-gradle@v4
 
-      - name: Build release APK
+      # This repo's Gradle project has shipped nested one level deep (repo-root/LiturgXApp/
+      # gradlew) as often as it's shipped flat (gradlew at repo root), depending on how it was
+      # extracted/pushed. Rather than hardcode a path that silently breaks if that ever
+      # changes, find wherever gradlew actually landed and use that as the project root for
+      # every step below.
+      - name: Locate Gradle project root
+        id: proj
         run: |
-          set -euo pipefail
-
-          ./gradlew assembleRelease --no-daemon
-
-          APK_PATH=$(find app/build/outputs/apk/release/ -type f -name "*.apk" | head -n1)
-
-          if [[ -z "$APK_PATH" ]]; then
-            echo "::error::Release APK not found in app/build/outputs/apk/release/"
+          GRADLEW_PATH=$(find . -maxdepth 3 -name gradlew -print -quit)
+          if [ -z "$GRADLEW_PATH" ]; then
+            echo "::error::Couldn't find a gradlew anywhere in the checkout (searched 3 levels deep)."
             exit 1
           fi
+          PROJECT_DIR=$(dirname "$GRADLEW_PATH")
+          echo "Found Gradle project at: $PROJECT_DIR"
+          echo "dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
 
-          cp "$APK_PATH" "LiturgX-unsigned.apk"
+      # Turns the KEYSTORE_B64 secret (the keystore file, base64-encoded) back into the real
+      # binary .jks/.keystore file, written outside the repo checkout to $RUNNER_TEMP so it
+      # never accidentally ends up in a commit, an artifact, or a cache.
+      - name: Decode keystore
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+        run: |
+          KEYSTORE_PATH="$RUNNER_TEMP/release.keystore"
+          echo "$KEYSTORE_B64" | base64 --decode > "$KEYSTORE_PATH"
+          echo "KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
 
-      - name: Upload APK artifact
+      - name: Grant execute permission for gradlew
+        working-directory: ${{ steps.proj.outputs.dir }}
+        run: chmod +x gradlew
+
+      # KEYSTORE_PATH comes from $GITHUB_ENV above (the decode step); the other three are read
+      # straight from repository secrets. app/build.gradle.kts's signingConfigs.release block
+      # picks all four up via System.getenv(...).
+      - name: Build signed release APK + AAB
+        working-directory: ${{ steps.proj.outputs.dir }}
+        env:
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+        run: ./gradlew assembleRelease bundleRelease --stacktrace
+
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: "LiturgX-unsigned"
-          path: "LiturgX-unsigned.apk"
+          name: liturgx-signed-release
+          path: |
+            ${{ steps.proj.outputs.dir }}/app/build/outputs/apk/release/*.apk
+            ${{ steps.proj.outputs.dir }}/app/build/outputs/bundle/release/*.aab
           if-no-files-found: error
+
+      # Only runs when the workflow was triggered by pushing a "v*" tag -- a manual
+      # workflow_dispatch run stops after the artifact upload above.
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ steps.proj.outputs.dir }}/app/build/outputs/apk/release/*.apk
+            ${{ steps.proj.outputs.dir }}/app/build/outputs/bundle/release/*.aab
+          generate_release_notes: true

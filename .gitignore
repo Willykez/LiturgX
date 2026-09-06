@@ -1,0 +1,28 @@
+# Gradle
+.gradle/
+build/
+*/build/
+*/*/build/
+
+# Local configuration
+local.properties
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+.DS_Store
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Signing -- the real keystore and its passwords must NEVER be committed. In CI, the keystore
+# is decoded from the KEYSTORE_B64 repository secret at build time (see
+# .github/workflows/release.yml) and written outside the checkout; locally, keep any keystore
+# file you create for testing release builds out of the repo entirely.
+*.jks
+*.keystore
+keystore.properties
+
+# Build outputs
+*.apk
+*.aab

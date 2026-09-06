@@ -15,6 +15,24 @@ android {
         versionName = "1.1"
     }
 
+    // Release signing is driven entirely by environment variables so the real keystore and
+    // its passwords never touch source control. Locally these are simply unset and a release
+    // build stays unsigned (Android Studio will warn, which is correct); in CI, the
+    // ".github/workflows/release.yml" workflow decodes the KEYSTORE_B64 repository secret to
+    // a file and exports the other three secrets (KEY_ALIAS, KEY_PASSWORD, STORE_PASSWORD)
+    // as env vars before invoking Gradle, so this block picks them up automatically.
+    signingConfigs {
+        create("release") {
+            val keystorePath = System.getenv("KEYSTORE_PATH")
+            if (keystorePath != null) {
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("STORE_PASSWORD")
+                keyAlias = System.getenv("KEY_ALIAS")
+                keyPassword = System.getenv("KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -23,6 +41,13 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Only wire the signing config up when a keystore is actually available (CI, or a
+            // local build with the four env vars exported by hand) -- otherwise leave the
+            // release build type unsigned rather than pointing it at a signing config with
+            // null fields, which fails the build the moment you try to configure it.
+            if (System.getenv("KEYSTORE_PATH") != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
