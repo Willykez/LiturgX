@@ -49,7 +49,10 @@ object YearlyLectionaryPdfGenerator {
     private const val INK_DIM = 0xFF5D5568.toInt()
     private const val PAPER = 0xFFFBF6EA.toInt()
 
-    /** Runs the day-by-day resolution (365/366 lookups) -- call from a background dispatcher. */
+    /** Runs the day-by-day resolution (365/366 lookups) -- call from a background dispatcher.
+     *  A single day's resolution failing (a data edge case, a future calendar quirk) shouldn't
+     *  take down the whole export -- logged and skipped so the rest of the year still comes
+     *  through, rather than the coroutine throwing partway and the person getting nothing. */
     fun buildAndGenerate(context: Context, year: Int, region: RegionSettings): File {
         val repository = LectionaryRepository(context)
         val entries = mutableListOf<DayEntry>()
@@ -57,25 +60,30 @@ object YearlyLectionaryPdfGenerator {
         var date = LocalDate.of(year, 1, 1)
         val end = LocalDate.of(year, 12, 31)
         while (!date.isAfter(end)) {
-            val isSunday = date.dayOfWeek == java.time.DayOfWeek.SUNDAY
-            val result = repository.getForDate(date, region)
-            val resolved = result.resolved
-            val saintRank = resolved.overridingSaint?.daraja
-            val isSpecial = resolved.periodKey in FIXED_SOLEMNITY_PERIOD_KEYS ||
-                resolved.season.key == "sikukuu_maalum" ||
-                (saintRank != null && saintRank in MAJOR_SAINT_RANKS)
+            try {
+                val isSunday = date.dayOfWeek == java.time.DayOfWeek.SUNDAY
+                val result = repository.getForDate(date, region)
+                val resolved = result.resolved
+                val saintRank = resolved.overridingSaint?.daraja
+                val isSpecial = resolved.periodKey in FIXED_SOLEMNITY_PERIOD_KEYS ||
+                    resolved.season.key == "sikukuu_maalum" ||
+                    (saintRank != null && saintRank in MAJOR_SAINT_RANKS)
 
-            if (isSunday || isSpecial) {
-                val title = resolved.overridingSaint?.jina ?: resolved.label
-                val citations = ReadingPresenter.present(result.readings)
-                    .map { it.label to it.citation }
-                if (citations.isNotEmpty() || resolved.overridingSaint != null) {
-                    entries += DayEntry(date, title, resolved.color, citations)
+                if (isSunday || isSpecial) {
+                    val title = resolved.overridingSaint?.jina ?: resolved.label
+                    val citations = ReadingPresenter.present(result.readings)
+                        .map { it.label to it.citation }
+                    if (citations.isNotEmpty() || resolved.overridingSaint != null) {
+                        entries += DayEntry(date, title, resolved.color, citations)
+                    }
                 }
+            } catch (e: Exception) {
+                android.util.Log.e("YearlyPdfGenerator", "Skipping $date -- resolution failed", e)
             }
             date = date.plusDays(1)
         }
 
+        check(entries.isNotEmpty()) { "No days resolved for $year -- nothing to export" }
         return generate(context, year, entries)
     }
 
@@ -97,37 +105,40 @@ object YearlyLectionaryPdfGenerator {
 
     private fun generate(context: Context, year: Int, entries: List<DayEntry>): File {
         val document = PdfDocument()
-        val cursor = PageCursor(document)
-        cursor.newPage()
+        try {
+            val cursor = PageCursor(document)
+            cursor.newPage()
 
-        cursor.drawText("KALENDA YA MASOMO $year", titlePaint())
-        cursor.advance(4)
-        cursor.drawText("Dominika zote na Sikukuu Maalum — LiturgX", smallPaint(INK_DIM))
-        cursor.advance(10)
-        cursor.drawDivider()
-        cursor.advance(16)
-
-        var lastMonth = -1
-        for (entry in entries) {
-            if (entry.date.monthValue != lastMonth) {
-                if (lastMonth != -1) cursor.advance(10)
-                cursor.drawText(monthNames[entry.date.monthValue - 1].uppercase(), monthHeaderPaint())
-                cursor.advance(8)
-                lastMonth = entry.date.monthValue
-            }
-            val dateLabel = "${weekdayNames[entry.date.dayOfWeek.value]}, ${entry.date.dayOfMonth} ${monthNames[entry.date.monthValue - 1]}"
-            cursor.drawDayBlock(dateLabel, entry.title, entry.color, entry.citations)
+            cursor.drawText("KALENDA YA MASOMO $year", titlePaint())
+            cursor.advance(4)
+            cursor.drawText("Dominika zote na Sikukuu Maalum — LiturgX", smallPaint(INK_DIM))
             cursor.advance(10)
+            cursor.drawDivider()
+            cursor.advance(16)
+
+            var lastMonth = -1
+            for (entry in entries) {
+                if (entry.date.monthValue != lastMonth) {
+                    if (lastMonth != -1) cursor.advance(10)
+                    cursor.drawText(monthNames[entry.date.monthValue - 1].uppercase(), monthHeaderPaint())
+                    cursor.advance(8)
+                    lastMonth = entry.date.monthValue
+                }
+                val dateLabel = "${weekdayNames[entry.date.dayOfWeek.value].orEmpty()}, ${entry.date.dayOfMonth} ${monthNames[entry.date.monthValue - 1]}"
+                cursor.drawDayBlock(dateLabel, entry.title, entry.color, entry.citations)
+                cursor.advance(10)
+            }
+
+            cursor.advance(18)
+            cursor.drawText("Imetumwa kutoka LiturgX", italicPaint(INK_DIM), alignEnd = true)
+            cursor.finishPage()
+
+            val outFile = File(File(context.cacheDir, "pdfs").apply { mkdirs() }, "kalenda_ya_masomo_$year.pdf")
+            FileOutputStream(outFile).use { document.writeTo(it) }
+            return outFile
+        } finally {
+            document.close()
         }
-
-        cursor.advance(18)
-        cursor.drawText("Imetumwa kutoka LiturgX", italicPaint(INK_DIM), alignEnd = true)
-        cursor.finishPage()
-
-        val outFile = File(File(context.cacheDir, "pdfs").apply { mkdirs() }, "kalenda_ya_masomo_$year.pdf")
-        FileOutputStream(outFile).use { document.writeTo(it) }
-        document.close()
-        return outFile
     }
 
     private fun titlePaint() = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {

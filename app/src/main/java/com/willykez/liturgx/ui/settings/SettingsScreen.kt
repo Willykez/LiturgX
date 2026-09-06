@@ -260,6 +260,7 @@ private fun YearlyPdfExportButton(region: RegionSettings, accentColor: Liturgica
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var isGenerating by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
     val year = remember { LocalDate.now().year }
 
     Column(Modifier.fillMaxWidth()) {
@@ -267,12 +268,22 @@ private fun YearlyPdfExportButton(region: RegionSettings, accentColor: Liturgica
             onClick = {
                 if (isGenerating) return@Button
                 isGenerating = true
+                errorMessage = null
                 scope.launch {
-                    val file = withContext(Dispatchers.IO) {
-                        YearlyLectionaryPdfGenerator.buildAndGenerate(context, year, region)
+                    try {
+                        val file = withContext(Dispatchers.IO) {
+                            YearlyLectionaryPdfGenerator.buildAndGenerate(context, year, region)
+                        }
+                        isGenerating = false
+                        PdfShareUtils.share(context, file, "Shiriki Kalenda ya Masomo $year")
+                    } catch (e: Exception) {
+                        // Never let a bad day's data or a share-sheet hiccup take the whole app
+                        // down -- log it (visible in Logcat under this tag if it happens again)
+                        // and surface a plain-language message instead of crashing.
+                        android.util.Log.e("YearlyPdfExport", "Failed to build/share yearly PDF", e)
+                        isGenerating = false
+                        errorMessage = "Imeshindikana kutengeneza PDF. Jaribu tena."
                     }
-                    isGenerating = false
-                    PdfShareUtils.share(context, file, "Shiriki Kalenda ya Masomo $year")
                 }
             },
             colors = ButtonDefaults.buttonColors(containerColor = androidx.compose.ui.graphics.Color(accentColor.hex)),
@@ -291,6 +302,10 @@ private fun YearlyPdfExportButton(region: RegionSettings, accentColor: Liturgica
                 Spacer(Modifier.width(8.dp))
                 Text("Pakua Kalenda ya $year")
             }
+        }
+        errorMessage?.let {
+            Spacer(Modifier.height(6.dp))
+            Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.error)
         }
     }
 }

@@ -21,8 +21,14 @@ class LectionaryDao(private val db: SQLiteDatabase) {
         mwakaLiturujia = getString(getColumnIndexOrThrow("mwaka_liturujia"))
     )
 
-    /** Fetch one or more entry_key rows for a period, optionally filtered by the `day` column. */
+    /** Fetch one or more entry_key rows for a period, optionally filtered by the `day` column.
+     *  Guards against an empty [entryKeys] list -- `entry_key IN ()` is invalid SQL syntax in
+     *  SQLite and would throw, so this returns an empty result instead of ever building that
+     *  query (defensive; every caller today always passes at least one key, but a future
+     *  resolver change accidentally producing an empty list should degrade to "no readings
+     *  found" rather than crash). */
     fun readings(season: String, periodKey: String, entryKeys: List<String>, day: String? = null): List<Reading> {
+        if (entryKeys.isEmpty()) return emptyList()
         val placeholders = entryKeys.joinToString(",") { "?" }
         val args = mutableListOf(season, periodKey).apply { addAll(entryKeys) }
         var sql = "SELECT * FROM readings WHERE season=? AND period_key=? AND entry_key IN ($placeholders)"

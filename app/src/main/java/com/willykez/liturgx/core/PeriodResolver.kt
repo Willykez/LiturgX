@@ -84,6 +84,18 @@ object PeriodResolver {
             date.monthValue == 12 && date.dayOfMonth in 26..31 -> SeasonalSpot(
                 "oktava", listOf("oktava"), SwahiliDate.abbrev(date),
                 "Oktava ya Noeli — ${SwahiliDate.full(date)}", LiturgicalColor.NYEUPE)
+            // Rare day (APP_LOGIC.md §9): only reachable when Epiphany is NOT transferred to
+            // Sunday (fixed Jan 6) and Jan 6 falls late enough in the week to leave an actual
+            // Sunday between Jan 1 (Mary Mother of God) and Epiphany itself.
+            // BUGFIX: this branch used to sit AFTER the plain "Jan 2-5 -> oktava" branch below,
+            // which has no day-of-week condition and therefore matched every Jan 2-5 date --
+            // Sunday or not -- before this one was ever reached, making it permanently dead
+            // code. Moved above the generic oktava fallback so a Sunday in this window is
+            // actually detected.
+            region.epiphanyMode == EpiphanyMode.FIXED_JAN6 && date.dayOfWeek == java.time.DayOfWeek.SUNDAY &&
+                date.isAfter(LocalDate.of(christmasYear + 1, 1, 1)) && date.isBefore(epiphany) -> SeasonalSpot(
+                "dominika_ya_pili_baada_ya_noeli", listOf("dominika_ya_pili_baada_ya_noeli"), null,
+                "Dominika ya Pili baada ya Noeli", LiturgicalColor.NYEUPE)
             date.monthValue == 1 && date.dayOfMonth in 2..5 && date.isBefore(epiphany) -> SeasonalSpot(
                 "oktava", listOf("oktava"), SwahiliDate.abbrev(date),
                 "Kabla ya Epifania — ${SwahiliDate.full(date)}", LiturgicalColor.NYEUPE)
@@ -94,13 +106,6 @@ object PeriodResolver {
             date.isAfter(epiphany) && date.isBefore(baptism) && date.dayOfWeek != java.time.DayOfWeek.SUNDAY -> SeasonalSpot(
                 "baada_ya_epifania", listOf("siku_za_wiki"), SwahiliDate.weekdayCode(date),
                 "Baada ya Epifania", LiturgicalColor.NYEUPE)
-            // Rare day (APP_LOGIC.md §9): only reachable when Epiphany is NOT transferred to
-            // Sunday (fixed Jan 6) and Jan 6 falls late enough in the week to leave an actual
-            // Sunday between Jan 1 (Mary Mother of God) and Epiphany itself.
-            region.epiphanyMode == EpiphanyMode.FIXED_JAN6 && date.dayOfWeek == java.time.DayOfWeek.SUNDAY &&
-                date.isAfter(epiphany.minusYears(0).let { LocalDate.of(christmasYear + 1, 1, 1) }) && date.isBefore(epiphany) -> SeasonalSpot(
-                "dominika_ya_pili_baada_ya_noeli", listOf("dominika_ya_pili_baada_ya_noeli"), null,
-                "Dominika ya Pili baada ya Noeli", LiturgicalColor.NYEUPE)
             else -> SeasonalSpot("mchana", listOf("mchana"), null,
                 "Noeli", LiturgicalColor.NYEUPE) // safe fallback within the octave window
         }
