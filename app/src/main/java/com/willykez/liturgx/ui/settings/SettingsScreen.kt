@@ -407,7 +407,37 @@ private fun YearlyPdfExportButton(region: RegionSettings, accent: Color) {
     val scope = rememberCoroutineScope()
     var isGenerating by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    // Matches the theme-mode / font-style segmented text pickers elsewhere on this screen,
+    // rather than importing Material3 FilterChip pills -- keeps this one flat/editorial rather
+    // than mixing in a rounded-pill style that doesn't appear anywhere else on the sheet.
+    var mode by remember { mutableStateOf(YearlyLectionaryPdfGenerator.PdfContentMode.REFERENCES_ONLY) }
     val year = remember { LocalDate.now().year }
+    val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
+
+    Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+        listOf(
+            YearlyLectionaryPdfGenerator.PdfContentMode.REFERENCES_ONLY to "Marejeo Pekee",
+            YearlyLectionaryPdfGenerator.PdfContentMode.FULL_TEXT to "Masomo Kamili",
+        ).forEach { (m, label) ->
+            val selected = m == mode
+            Text(
+                label,
+                style = MaterialTheme.typography.labelLarge,
+                color = if (selected) accent else onBgDim,
+                modifier = Modifier.clickable { mode = m },
+            )
+        }
+    }
+    Spacer(Modifier.height(6.dp))
+    Text(
+        if (mode == YearlyLectionaryPdfGenerator.PdfContentMode.REFERENCES_ONLY)
+            "Tarehe, jina, rangi na marejeo ya masomo -- ukurasa mfupi, rahisi kuchapisha."
+        else
+            "Masomo kamili ya kila siku, si marejeo tu -- faili kubwa zaidi na huchukua muda mrefu kidogo kutengenezwa.",
+        style = MaterialTheme.typography.labelMedium,
+        color = onBgDim,
+    )
+    Spacer(Modifier.height(10.dp))
 
     OutlinedButton(
         onClick = {
@@ -417,7 +447,7 @@ private fun YearlyPdfExportButton(region: RegionSettings, accent: Color) {
             scope.launch {
                 try {
                     val file = withContext(Dispatchers.IO) {
-                        YearlyLectionaryPdfGenerator.buildAndGenerate(context, year, region)
+                        YearlyLectionaryPdfGenerator.buildAndGenerate(context, year, region, mode)
                     }
                     isGenerating = false
                     PdfShareUtils.share(context, file, "Shiriki Kalenda ya Masomo $year")
@@ -440,7 +470,12 @@ private fun YearlyPdfExportButton(region: RegionSettings, accent: Color) {
         } else {
             Icon(Icons.Filled.PictureAsPdf, contentDescription = null, tint = accent, modifier = Modifier.height(18.dp).width(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text("Pakua Kalenda ya $year")
+            Text(
+                if (mode == YearlyLectionaryPdfGenerator.PdfContentMode.REFERENCES_ONLY)
+                    "Pakua Kalenda ya $year"
+                else
+                    "Pakua Masomo Kamili ya $year"
+            )
         }
     }
     errorMessage?.let {

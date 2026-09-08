@@ -1,12 +1,14 @@
 package com.willykez.liturgx.ui
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
@@ -34,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
@@ -43,6 +46,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.willykez.liturgx.data.ProgressStore
 import com.willykez.liturgx.data.bible.BibleBrowseRepository
 import com.willykez.liturgx.ui.bible.BibleScreen
 import com.willykez.liturgx.ui.calendar.CalendarScreen
@@ -73,6 +77,26 @@ private sealed class Dest(val route: String, val label: String, val icon: androi
 }
 
 private val destinations = listOf(Dest.Leo, Dest.Kalenda, Dest.Biblia, Dest.Watakatifu, Dest.Hifadhi)
+
+/** "🔥 1" in the top bar, matching BibliaApp's reading-streak badge -- reads [ProgressStore]
+ *  fresh on every recomposition (same pattern as the other small SharedPreferences-backed
+ *  stores elsewhere in the app), so it picks up today's streak as soon as [HomeScreen] records
+ *  it. Hidden entirely at zero so a brand-new install doesn't lead with a "0" that reads as a
+ *  broken feature rather than an un-started one. */
+@Composable
+private fun StreakBadge(today: java.time.LocalDate, accent: Color) {
+    val context = LocalContext.current
+    val progressStore = remember { ProgressStore(context) }
+    val streak = ProgressStore.currentStreak(progressStore.openedDates(), today)
+    if (streak <= 0) return
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(end = 4.dp)
+    ) {
+        Icon(Icons.Filled.LocalFireDepartment, contentDescription = "Siku $streak mfululizo", tint = accent, modifier = Modifier.padding(end = 2.dp))
+        Text(streak.toString(), style = MaterialTheme.typography.labelLarge, color = accent)
+    }
+}
 
 private fun titleFor(route: String?): String = when (route) {
     Dest.Leo.route -> "LiturgX"
@@ -129,6 +153,7 @@ fun LiturgXApp() {
                     TopAppBar(
                         title = { Text(titleFor(currentRoute), style = MaterialTheme.typography.titleLarge) },
                         actions = {
+                            StreakBadge(today = vm.today, accent = seasonAccent(accentColor))
                             IconButton(onClick = { showSettingsSheet = true }) {
                                 Icon(Icons.Filled.Settings, contentDescription = "Mipangilio")
                             }
