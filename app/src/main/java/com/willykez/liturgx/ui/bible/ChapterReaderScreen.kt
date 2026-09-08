@@ -11,6 +11,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -53,7 +54,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -91,6 +94,10 @@ import java.io.File
  * whichever verse was tapped most recently, with the same fade+expand transition as the
  * original single-verse version -- now carrying a verse count, a clear-selection button, and
  * bookmark/highlight/note actions alongside the existing copy/share ones.
+ *
+ * Chapters can also be changed with a left/right swipe over the verse list, alongside the
+ * chevron buttons -- [detectHorizontalDragGestures] only reacts to horizontally-dominant drags,
+ * so it doesn't fight the list's own vertical scrolling.
  *
  * Reading preferences (font style, verse numbers, paragraph mode) and the bookmark/highlight/
  * note actions in the selection row are read straight from [ReadingPrefsStore] and
@@ -135,6 +142,11 @@ fun ChapterReaderScreen(
     var pdfFile by remember { mutableStateOf<File?>(null) }
     var showPdfPreview by remember { mutableStateOf(false) }
     var showNoteDialog by remember { mutableStateOf(false) }
+    // Left/right swipe to move a chapter, alongside the chevrons -- a plain vertical scroll
+    // never accumulates meaningful horizontal distance, so it doesn't fight this.
+    var horizontalDragAccum by remember(book.id, chapterNum) { mutableStateOf(0f) }
+    val density = LocalDensity.current
+    val swipeThresholdPx = remember(density) { with(density) { 72.dp.toPx() } }
     // Bumped after any bookmark/highlight/note write so the rows relying on the store recompose
     // (SharedPreferences reads aren't observable to Compose on their own).
     var userDataVersion by remember { mutableStateOf(0) }
@@ -207,7 +219,27 @@ fun ChapterReaderScreen(
 
         LazyColumn(
             state = listState,
-            modifier = Modifier.weight(1f).fillMaxWidth(),
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .pointerInput(book.id, chapterNum) {
+                    detectHorizontalDragGestures(
+                        onDragEnd = {
+                            if (horizontalDragAccum <= -swipeThresholdPx && chapterNum < book.chapterCount) {
+                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onNextChapter()
+                            } else if (horizontalDragAccum >= swipeThresholdPx && chapterNum > 1) {
+                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onPrevChapter()
+                            }
+                            horizontalDragAccum = 0f
+                        },
+                        onDragCancel = { horizontalDragAccum = 0f }
+                    ) { change, dragAmount ->
+                        horizontalDragAccum += dragAmount
+                        change.consume()
+                    }
+                },
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(if (paragraphMode) 0.dp else 2.dp)
         ) {

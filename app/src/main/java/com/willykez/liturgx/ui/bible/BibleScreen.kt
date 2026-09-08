@@ -1,5 +1,6 @@
 package com.willykez.liturgx.ui.bible
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.willykez.liturgx.core.LiturgicalColor
 import com.willykez.liturgx.data.bible.BibleBookInfo
 import com.willykez.liturgx.data.bible.BibleBrowseRepository
+import com.willykez.liturgx.data.bible.ReadingPrefsStore
 import com.willykez.liturgx.data.bible.Testament
 import com.willykez.liturgx.ui.BibleJumpTarget
 import com.willykez.liturgx.ui.theme.seasonAccent
@@ -53,8 +55,31 @@ fun BibleScreen(
 ) {
     val context = LocalContext.current
     val repository = remember { BibleBrowseRepository(context.applicationContext) }
+    val readingPrefs = remember { ReadingPrefsStore(context) }
     val books = remember { repository.allBooks() }
-    var route by remember { mutableStateOf<BibleRoute>(BibleRoute.Books) }
+
+    // Resume mid-chapter if the person left the app without backing out to the book list
+    // first (see the LaunchedEffect below, which is what saves/clears this) -- otherwise
+    // start fresh at the book list, same as before.
+    var route by remember {
+        val resumed = readingPrefs.loadLastLocation()?.let { (bookId, chapterNum) ->
+            books.firstOrNull { it.id == bookId }?.let { book -> BibleRoute.Reader(book, chapterNum) }
+        }
+        mutableStateOf(resumed ?: BibleRoute.Books)
+    }
+
+    // Persist (or clear) the resume point every time the route actually changes -- covers
+    // every way of getting to a chapter (tapping through, chevrons, swipe, a Saved-tab jump)
+    // in one place, rather than each of those call sites remembering to do it themselves.
+    // Backing all the way out to the book list clears it: that's a deliberate "done reading"
+    // signal, not a spot to resume into next time.
+    LaunchedEffect(route) {
+        when (val r = route) {
+            is BibleRoute.Reader -> readingPrefs.saveLastLocation(r.book.id, r.chapterNum)
+            is BibleRoute.Books -> readingPrefs.clearLastLocation()
+            else -> Unit
+        }
+    }
 
     // A bookmark/highlight/note tapped on the Saved tab arrives here as a plain address
     // (bookId/chapter/verse) rather than a BibleRoute, since Saved has no reason to know about
@@ -66,6 +91,18 @@ fun BibleScreen(
             route = BibleRoute.Reader(book, jump.chapterNum, jump.verseNum)
         }
         onJumpHandled()
+    }
+
+    // Back steps up through this tab's own drill-down (Reader -> Chapters -> Books, Search ->
+    // Books) before it ever reaches the app-level "go to Leo" handler in LiturgXApp -- so
+    // backing out of a chapter lands on that book's chapter grid, not straight on Leo.
+    BackHandler(enabled = route !is BibleRoute.Books) {
+        route = when (val r = route) {
+            is BibleRoute.Reader -> BibleRoute.Chapters(r.book)
+            is BibleRoute.Chapters -> BibleRoute.Books
+            is BibleRoute.Search -> BibleRoute.Books
+            is BibleRoute.Books -> BibleRoute.Books
+        }
     }
 
     Box(modifier.fillMaxSize()) {

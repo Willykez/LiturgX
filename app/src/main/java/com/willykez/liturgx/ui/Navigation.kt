@@ -1,5 +1,6 @@
 package com.willykez.liturgx.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -119,6 +120,19 @@ fun LiturgXApp() {
     val currentRoute = navBackStackEntry?.destination?.route
     val accentColor = if (currentRoute == Dest.Leo.route) vm.todayResult.resolved.color
     else vm.selectedResult.resolved.color
+
+    // Every tab is one back-press away from Leo, and only Leo itself lets the press fall
+    // through to the system (which exits the app) -- so back never dumps someone straight out
+    // of the app from Kalenda/Biblia/Watakatifu/Hifadhi. Bible's own internal drill-down
+    // (Reader -> Chapters -> Books) is handled separately, inside BibleScreen -- by the time
+    // back reaches here from that tab, it's already at Books and this just steps up to Leo.
+    BackHandler(enabled = currentRoute != null && currentRoute != Dest.Leo.route) {
+        navController.navigate(Dest.Leo.route) {
+            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
 
     val darkTheme = isDarkThemeActive(vm.themeMode)
 
