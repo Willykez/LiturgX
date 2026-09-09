@@ -67,6 +67,11 @@ fun DailyLiturgicalCard(
             letterSpacing = 1.sp
         )
         Text(dateText, style = MaterialTheme.typography.bodySmall, color = inkDim)
+        Text(
+            "Rangi ya Liturujia: ${liturgicalColor.swahili.replaceFirstChar { it.uppercase() }}",
+            style = MaterialTheme.typography.bodySmall,
+            color = accent
+        )
 
         readings.forEachIndexed { index, reading ->
             Spacer(Modifier.height(20.dp))

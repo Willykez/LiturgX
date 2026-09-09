@@ -218,18 +218,57 @@ fun LiturgXApp() {
                             .fillMaxSize()
                     ) {
                         composable(Dest.Leo.route) {
-                            HomeScreen(todayResult = vm.todayResult, region = vm.region)
+                            HomeScreen(
+                                todayResult = vm.todayResult,
+                                region = vm.region,
+                                onOpenInBible = { bookId, chapterNum, verseNum ->
+                                    vm.requestBibleJump(bookId, chapterNum, verseNum)
+                                    navController.navigate(Dest.Biblia.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                },
+                                onOpenSaint = { saintId ->
+                                    vm.requestSaintJump(saintId)
+                                    navController.navigate(Dest.Watakatifu.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
+                            )
                         }
                         composable(Dest.Kalenda.route) {
                             CalendarScreen(
                                 selectedResult = vm.selectedResult,
                                 region = vm.region,
                                 onSelectDate = { vm.goToDate(it) },
-                                onJumpToToday = { vm.jumpToToday() }
+                                onJumpToToday = { vm.jumpToToday() },
+                                onOpenInBible = { bookId, chapterNum, verseNum ->
+                                    vm.requestBibleJump(bookId, chapterNum, verseNum)
+                                    navController.navigate(Dest.Biblia.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                },
+                                onOpenSaint = { saintId ->
+                                    vm.requestSaintJump(saintId)
+                                    navController.navigate(Dest.Watakatifu.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
                             )
                         }
                         composable(Dest.Watakatifu.route) {
-                            SaintsScreen(saints = vm.saintsList())
+                            SaintsScreen(
+                                saints = vm.saintsList(),
+                                pendingSaintId = vm.pendingSaintId,
+                                onSaintHandled = { vm.consumeSaintJump() }
+                            )
                         }
                         composable(Dest.Biblia.route) {
                             BibleScreen(

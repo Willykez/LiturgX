@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
@@ -22,13 +23,38 @@ import com.willykez.liturgx.core.Saint
 import com.willykez.liturgx.ui.components.LiturgicalSeal
 import com.willykez.liturgx.ui.theme.seasonAccentSoft
 
+/**
+ * [pendingSaintId] arrives from tapping today's saint chip on Home (see
+ * [com.willykez.liturgx.ui.LectionaryViewModel.requestSaintJump]) -- when set, this screen clears
+ * any active search filter (so the target saint is guaranteed visible), auto-expands that
+ * saint's bio, and scrolls to it, then calls [onSaintHandled] so re-entering this tab later
+ * doesn't jump again unprompted.
+ */
 @Composable
-fun SaintsScreen(saints: List<Saint>, modifier: Modifier = Modifier) {
+fun SaintsScreen(
+    saints: List<Saint>,
+    pendingSaintId: Int? = null,
+    onSaintHandled: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
     var query by remember { mutableStateOf("") }
     val filtered = remember(query, saints) {
         if (query.isBlank()) saints else saints.filter {
             it.jina.contains(query, ignoreCase = true) || it.tarehe.contains(query, ignoreCase = true)
         }
+    }
+    val listState = rememberLazyListState()
+    // Which saints are expanded -- hoisted up here (rather than local state inside each row)
+    // so a jump from Home can force one open from outside, alongside the normal tap-to-expand.
+    var expandedIds by remember { mutableStateOf(setOf<Int>()) }
+
+    LaunchedEffect(pendingSaintId) {
+        val id = pendingSaintId ?: return@LaunchedEffect
+        query = ""
+        expandedIds = expandedIds + id
+        val index = saints.indexOfFirst { it.id == id }
+        if (index >= 0) listState.animateScrollToItem(index)
+        onSaintHandled()
     }
 
     val onBg = MaterialTheme.colorScheme.onBackground
@@ -51,18 +77,25 @@ fun SaintsScreen(saints: List<Saint>, modifier: Modifier = Modifier) {
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(Modifier.height(14.dp))
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(filtered, key = { it.id }) { saint -> SaintRow(saint) }
+        LazyColumn(state = listState, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            items(filtered, key = { it.id }) { saint ->
+                SaintRow(
+                    saint = saint,
+                    expanded = saint.id in expandedIds,
+                    onExpandedChange = { open ->
+                        expandedIds = if (open) expandedIds + saint.id else expandedIds - saint.id
+                    }
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun SaintRow(saint: Saint) {
+private fun SaintRow(saint: Saint, expanded: Boolean, onExpandedChange: (Boolean) -> Unit) {
     val color = LiturgicalColor.fromSwahili(saint.rangi)
     val onBg = MaterialTheme.colorScheme.onBackground
     val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
-    var expanded by remember(saint.id) { mutableStateOf(false) }
     val hasBio = !saint.wasifu.isNullOrBlank()
 
     Column(
@@ -70,7 +103,7 @@ private fun SaintRow(saint: Saint) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(seasonAccentSoft(color))
-            .clickable(enabled = hasBio) { expanded = !expanded }
+            .clickable(enabled = hasBio) { onExpandedChange(!expanded) }
             .padding(14.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {

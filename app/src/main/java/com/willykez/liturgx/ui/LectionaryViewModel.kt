@@ -146,4 +146,17 @@ class LectionaryViewModel(app: Application) : AndroidViewModel(app) {
     fun consumeBibleJump() {
         pendingBibleJump = null
     }
+
+    /** Same pattern as [pendingBibleJump], for jumping from today's saint chip (Home) straight
+     *  to that saint's entry in the Watakatifu tab. */
+    var pendingSaintId by mutableStateOf<Int?>(null)
+        private set
+
+    fun requestSaintJump(saintId: Int) {
+        pendingSaintId = saintId
+    }
+
+    fun consumeSaintJump() {
+        pendingSaintId = null
+    }
 }

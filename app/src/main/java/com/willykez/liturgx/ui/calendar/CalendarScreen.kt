@@ -69,6 +69,8 @@ fun CalendarScreen(
     region: RegionSettings,
     onSelectDate: (LocalDate) -> Unit,
     onJumpToToday: () -> Unit,
+    onOpenInBible: (bookId: Int, chapterNum: Int, verseNum: Int) -> Unit = { _, _, _ -> },
+    onOpenSaint: (saintId: Int) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -152,6 +154,8 @@ fun CalendarScreen(
             DailyReadingsView(
                 dayResult = selectedResult,
                 showHeader = false,
+                onOpenInBible = onOpenInBible,
+                onOpenSaint = onOpenSaint,
                 modifier = Modifier.weight(1f)
             )
         }

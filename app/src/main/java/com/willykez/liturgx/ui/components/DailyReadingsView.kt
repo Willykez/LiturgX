@@ -1,6 +1,7 @@
 package com.willykez.liturgx.ui.components
 
 import android.content.Intent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -42,6 +43,8 @@ fun DailyReadingsView(
     extraHeaderContent: (@Composable () -> Unit)? = null,
     extraFooterContent: (@Composable () -> Unit)? = null,
     showHeader: Boolean = true,
+    onOpenInBible: ((bookId: Int, chapterNum: Int, verseNum: Int) -> Unit)? = null,
+    onOpenSaint: ((saintId: Int) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val resolved = dayResult.resolved
@@ -181,7 +184,11 @@ fun DailyReadingsView(
 
                     resolved.overridingSaint?.let { saint ->
                         Spacer(Modifier.height(10.dp))
-                        AssistChip(text = "${saint.daraja} — ${resolved.label}", accentHex = accent)
+                        AssistChip(
+                            text = "${saint.daraja} — ${resolved.label}",
+                            accentHex = accent,
+                            onClick = onOpenSaint?.let { open -> { open(saint.id) } }
+                        )
                     }
                     dayResult.optionalMemorial?.let { memorial ->
                         Spacer(Modifier.height(8.dp))
@@ -212,7 +219,8 @@ fun DailyReadingsView(
                 dateText = dateLine,
                 seasonLabel = seasonLabel,
                 tts = tts,
-                label = item.label
+                label = item.label,
+                onOpenInBible = onOpenInBible
             )
         }
 
@@ -253,10 +261,11 @@ fun DailyReadingsView(
 }
 
 @Composable
-private fun AssistChip(text: String, accentHex: androidx.compose.ui.graphics.Color) {
+private fun AssistChip(text: String, accentHex: androidx.compose.ui.graphics.Color, onClick: (() -> Unit)? = null) {
     Surface(
         color = accentHex.copy(alpha = 0.18f),
-        shape = MaterialTheme.shapes.small
+        shape = MaterialTheme.shapes.small,
+        modifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
     ) {
         Text(
             text,

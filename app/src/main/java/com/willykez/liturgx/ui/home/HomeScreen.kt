@@ -1,5 +1,6 @@
 package com.willykez.liturgx.ui.home
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -41,7 +42,7 @@ import java.time.LocalDate
 
 private data class VerseOfDay(val citation: String, val text: String)
 private data class UpcomingHoliday(val date: LocalDate, val title: String, val color: LiturgicalColor)
-private data class UpcomingSaint(val date: LocalDate, val name: String, val rank: String)
+private data class UpcomingSaint(val date: LocalDate, val saintId: Int, val name: String, val rank: String)
 
 private const val UPCOMING_HORIZON_DAYS = 45
 private const val UPCOMING_MAX_ITEMS = 5
@@ -78,7 +79,7 @@ private fun findUpcoming(repository: LectionaryRepository, from: LocalDate, regi
                 isHoliday && holidays.size < UPCOMING_MAX_ITEMS ->
                     holidays += UpcomingHoliday(date, resolved.overridingSaint?.jina ?: resolved.label, resolved.color)
                 !isHoliday && resolved.overridingSaint != null && saints.size < UPCOMING_MAX_ITEMS ->
-                    saints += UpcomingSaint(date, resolved.overridingSaint.jina, saintRank ?: "")
+                    saints += UpcomingSaint(date, resolved.overridingSaint.id, resolved.overridingSaint.jina, saintRank ?: "")
             }
         } catch (e: Exception) {
             android.util.Log.e("HomeUpcoming", "Skipping $date", e)
@@ -89,7 +90,13 @@ private fun findUpcoming(repository: LectionaryRepository, from: LocalDate, regi
 }
 
 @Composable
-fun HomeScreen(todayResult: DayResult, region: RegionSettings, modifier: Modifier = Modifier) {
+fun HomeScreen(
+    todayResult: DayResult,
+    region: RegionSettings,
+    onOpenInBible: (bookId: Int, chapterNum: Int, verseNum: Int) -> Unit = { _, _, _ -> },
+    onOpenSaint: (saintId: Int) -> Unit = {},
+    modifier: Modifier = Modifier
+) {
     val context = LocalContext.current
     val progressStore = remember { ProgressStore(context) }
     val bibleRepository = remember { BibleRepository(context.applicationContext) }
@@ -156,13 +163,15 @@ fun HomeScreen(todayResult: DayResult, region: RegionSettings, modifier: Modifie
                 if (upcomingSaints.isNotEmpty()) {
                     UpcomingSection(title = "Watakatifu Wanaokuja") {
                         upcomingSaints.forEachIndexed { index, saint ->
-                            UpcomingSaintRow(saint)
+                            UpcomingSaintRow(saint, onClick = { onOpenSaint(saint.saintId) })
                             if (index != upcomingSaints.lastIndex) UpcomingDivider()
                         }
                     }
                 }
             }
         },
+        onOpenInBible = onOpenInBible,
+        onOpenSaint = onOpenSaint,
         modifier = modifier
     )
 }
@@ -209,11 +218,11 @@ private fun UpcomingHolidayRow(holiday: UpcomingHoliday) {
 }
 
 @Composable
-private fun UpcomingSaintRow(saint: UpcomingSaint) {
+private fun UpcomingSaintRow(saint: UpcomingSaint, onClick: () -> Unit) {
     val onBg = MaterialTheme.colorScheme.onBackground
     val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
     Row(
-        Modifier.fillMaxWidth().padding(vertical = 10.dp),
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(Icons.Filled.Star, contentDescription = null, tint = onBgDim, modifier = Modifier.size(18.dp))

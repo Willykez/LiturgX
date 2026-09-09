@@ -55,6 +55,8 @@ object DailyReadingPdfGenerator {
         cursor.drawText(seasonText.uppercase(), titlePaint(color))
         cursor.advance(4)
         cursor.drawText(dateText, smallPaint(INK_DIM))
+        cursor.advance(3)
+        cursor.drawText("Rangi ya Liturujia: ${color.swahili.replaceFirstChar { it.uppercase() }}", smallPaint(color.hex.toInt()))
         cursor.advance(10)
         cursor.drawDivider()
         cursor.advance(18)
@@ -131,7 +133,10 @@ object DailyReadingPdfGenerator {
         private var pageNumber = 0
 
         fun newPage() {
-            page?.let { document.finishPage(it) }
+            page?.let {
+                drawPageNumber()
+                document.finishPage(it)
+            }
             pageNumber++
             val info = PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, pageNumber).create()
             val newPage = document.startPage(info)
@@ -142,8 +147,25 @@ object DailyReadingPdfGenerator {
         }
 
         fun finishPage() {
-            page?.let { document.finishPage(it) }
+            page?.let {
+                drawPageNumber()
+                document.finishPage(it)
+            }
             page = null
+        }
+
+        /** "Ukurasa N" centered in the bottom margin -- printed material with no page numbers
+         *  is awkward the moment it's more than one sheet (can't tell order back up if dropped,
+         *  can't say "see page 3"). Drawn at a fixed position within the margin whitespace, so
+         *  it never competes with [ensureSpace]'s content-flow bookkeeping above it. */
+        private fun drawPageNumber() {
+            val c = canvas ?: return
+            val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                textSize = 8.5f
+                color = INK_DIM
+                textAlign = Paint.Align.CENTER
+            }
+            c.drawText("Ukurasa $pageNumber", PAGE_WIDTH / 2f, (PAGE_HEIGHT - MARGIN / 2f), paint)
         }
 
         fun advance(dp: Int) {

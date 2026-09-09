@@ -67,6 +67,11 @@ fun LiturgicalCard(
             letterSpacing = 1.sp
         )
         Text(dateText, style = MaterialTheme.typography.bodySmall, color = inkDim)
+        Text(
+            "Rangi ya Liturujia: ${liturgicalColor.swahili.replaceFirstChar { it.uppercase() }}",
+            style = MaterialTheme.typography.bodySmall,
+            color = accent
+        )
 
         Spacer(Modifier.height(16.dp))
         HorizontalDivider(color = inkDim.copy(alpha = 0.25f))

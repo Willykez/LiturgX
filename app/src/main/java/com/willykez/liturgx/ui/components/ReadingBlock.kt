@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.willykez.liturgx.core.LiturgicalColor
 import com.willykez.liturgx.core.ReadingPresenter
+import com.willykez.liturgx.data.bible.BibleBooks
 import com.willykez.liturgx.data.bible.BiblePassage
 import com.willykez.liturgx.data.bible.BibleRepository
 import com.willykez.liturgx.ui.theme.seasonAccent
@@ -67,7 +68,8 @@ fun ReadingBlock(
     dateText: String,
     seasonLabel: String,
     tts: TtsController,
-    label: String? = null
+    label: String? = null,
+    onOpenInBible: ((bookId: Int, chapterNum: Int, verseNum: Int) -> Unit)? = null
 ) {
     val accent = seasonAccent(color)
     val onBg = MaterialTheme.colorScheme.onBackground
@@ -81,6 +83,10 @@ fun ReadingBlock(
     var resolveState by remember(citation) { mutableStateOf(ResolveState.IDLE) }
     var passage by remember(citation) { mutableStateOf<BiblePassage?>(null) }
     var showShareCard by remember(citation) { mutableStateOf(false) }
+    // Set by the "open in Bible" button; resolving a passage is async, so this just records the
+    // intent and a LaunchedEffect below fires the actual jump once `passage` is ready -- covers
+    // both the already-resolved case (fires next frame) and the not-yet-resolved one (waits).
+    var pendingOpenInBible by remember(citation) { mutableStateOf(false) }
 
     fun resolveIfNeeded() {
         if (resolveState != ResolveState.IDLE) return
@@ -90,6 +96,17 @@ fun ReadingBlock(
             passage = result
             resolveState = if (result != null) ResolveState.RESOLVED else ResolveState.UNAVAILABLE
         }
+    }
+
+    LaunchedEffect(pendingOpenInBible, passage) {
+        if (!pendingOpenInBible) return@LaunchedEffect
+        val resolvedPassage = passage ?: return@LaunchedEffect
+        val bookId = BibleBooks.resolveId(resolvedPassage.book)
+        val firstVerse = resolvedPassage.verses.firstOrNull()
+        if (bookId != null && firstVerse != null) {
+            onOpenInBible?.invoke(bookId, firstVerse.chapter, firstVerse.verse)
+        }
+        pendingOpenInBible = false
     }
 
     val canExpand = resolveState != ResolveState.UNAVAILABLE
@@ -165,6 +182,20 @@ fun ReadingBlock(
                     tint = onBgDim,
                     modifier = Modifier.size(16.dp)
                 )
+            }
+            if (onOpenInBible != null) {
+                Spacer(Modifier.width(4.dp))
+                IconButton(onClick = {
+                    pendingOpenInBible = true
+                    resolveIfNeeded()
+                }, modifier = Modifier.size(28.dp)) {
+                    Icon(
+                        Icons.Filled.OpenInNew,
+                        contentDescription = "Fungua katika Biblia",
+                        tint = onBgDim,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
         }
 

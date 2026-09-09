@@ -227,7 +227,10 @@ object YearlyLectionaryPdfGenerator {
         private var pageNumber = 0
 
         fun newPage() {
-            page?.let { document.finishPage(it) }
+            page?.let {
+                drawPageNumber()
+                document.finishPage(it)
+            }
             pageNumber++
             val info = PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, pageNumber).create()
             val newPage = document.startPage(info)
@@ -238,8 +241,24 @@ object YearlyLectionaryPdfGenerator {
         }
 
         fun finishPage() {
-            page?.let { document.finishPage(it) }
+            page?.let {
+                drawPageNumber()
+                document.finishPage(it)
+            }
             page = null
+        }
+
+        /** "Ukurasa N" centered in the bottom margin -- see the same helper in
+         *  [com.willykez.liturgx.data.sharing.DailyReadingPdfGenerator] for why this matters
+         *  more here than it might seem: the yearly export can easily run to 40+ pages. */
+        private fun drawPageNumber() {
+            val c = canvas ?: return
+            val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                textSize = 8.5f
+                color = INK_DIM
+                textAlign = Paint.Align.CENTER
+            }
+            c.drawText("Ukurasa $pageNumber", PAGE_WIDTH / 2f, (PAGE_HEIGHT - MARGIN / 2f), paint)
         }
 
         fun advance(dp: Int) {
