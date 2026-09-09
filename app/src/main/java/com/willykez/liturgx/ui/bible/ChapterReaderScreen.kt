@@ -97,7 +97,10 @@ import java.io.File
  *
  * Chapters can also be changed with a left/right swipe over the verse list, alongside the
  * chevron buttons -- [detectHorizontalDragGestures] only reacts to horizontally-dominant drags,
- * so it doesn't fight the list's own vertical scrolling.
+ * so it doesn't fight the list's own vertical scrolling. Either way, the actual slide/fade
+ * transition between chapters is animated one level up, in [BibleScreen]'s `AnimatedContent`
+ * around this composable -- this function itself has no idea a transition is happening, it just
+ * gets recomposed fresh with new `book`/`chapterNum` values like before.
  *
  * Reading preferences (font style, verse numbers, paragraph mode) and the bookmark/highlight/
  * note actions in the selection row are read straight from [ReadingPrefsStore] and

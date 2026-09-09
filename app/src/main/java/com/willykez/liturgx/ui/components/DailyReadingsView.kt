@@ -40,6 +40,7 @@ private enum class SharePreparing { NONE, TEXT, PDF }
 fun DailyReadingsView(
     dayResult: DayResult,
     extraHeaderContent: (@Composable () -> Unit)? = null,
+    extraFooterContent: (@Composable () -> Unit)? = null,
     showHeader: Boolean = true,
     modifier: Modifier = Modifier
 ) {
@@ -223,6 +224,10 @@ fun DailyReadingsView(
                     color = onBgDim
                 )
             }
+        }
+
+        extraFooterContent?.let { content ->
+            item { content() }
         }
     }
 

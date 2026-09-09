@@ -1,6 +1,13 @@
 package com.willykez.liturgx.ui.bible
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -119,16 +126,37 @@ fun BibleScreen(
                 onBack = { route = BibleRoute.Books },
                 onSelectChapter = { chNum -> route = BibleRoute.Reader(r.book, chNum) }
             )
-            is BibleRoute.Reader -> ChapterReaderScreen(
-                book = r.book,
-                chapterNum = r.chapterNum,
-                scrollToVerse = r.scrollToVerse,
-                color = currentColor,
-                repository = repository,
-                onBack = { route = BibleRoute.Chapters(r.book) },
-                onPrevChapter = { if (r.chapterNum > 1) route = BibleRoute.Reader(r.book, r.chapterNum - 1) },
-                onNextChapter = { if (r.chapterNum < r.book.chapterCount) route = BibleRoute.Reader(r.book, r.chapterNum + 1) }
-            )
+            is BibleRoute.Reader -> AnimatedContent(
+                targetState = r,
+                modifier = Modifier.fillMaxSize(),
+                transitionSpec = {
+                    // A book change (arriving via search or a Saved-tab jump) has no natural
+                    // left/right direction, so it just crossfades; a same-book chapter change
+                    // slides -- forward (next chapter, or a jump to a later one) goes right to
+                    // left, backward goes left to right, matching the swipe/chevron direction.
+                    if (targetState.book.id != initialState.book.id) {
+                        fadeIn(tween(220)).togetherWith(fadeOut(tween(180)))
+                    } else if (targetState.chapterNum >= initialState.chapterNum) {
+                        (slideInHorizontally(tween(280)) { width -> width } + fadeIn(tween(220)))
+                            .togetherWith(slideOutHorizontally(tween(280)) { width -> -width } + fadeOut(tween(180)))
+                    } else {
+                        (slideInHorizontally(tween(280)) { width -> -width } + fadeIn(tween(220)))
+                            .togetherWith(slideOutHorizontally(tween(280)) { width -> width } + fadeOut(tween(180)))
+                    }
+                },
+                label = "chapterReader"
+            ) { target ->
+                ChapterReaderScreen(
+                    book = target.book,
+                    chapterNum = target.chapterNum,
+                    scrollToVerse = target.scrollToVerse,
+                    color = currentColor,
+                    repository = repository,
+                    onBack = { route = BibleRoute.Chapters(target.book) },
+                    onPrevChapter = { if (target.chapterNum > 1) route = BibleRoute.Reader(target.book, target.chapterNum - 1) },
+                    onNextChapter = { if (target.chapterNum < target.book.chapterCount) route = BibleRoute.Reader(target.book, target.chapterNum + 1) }
+                )
+            }
             is BibleRoute.Search -> BibleSearchScreen(
                 color = currentColor,
                 repository = repository,

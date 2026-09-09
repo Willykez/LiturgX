@@ -218,7 +218,7 @@ fun LiturgXApp() {
                             .fillMaxSize()
                     ) {
                         composable(Dest.Leo.route) {
-                            HomeScreen(todayResult = vm.todayResult)
+                            HomeScreen(todayResult = vm.todayResult, region = vm.region)
                         }
                         composable(Dest.Kalenda.route) {
                             CalendarScreen(

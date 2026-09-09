@@ -195,8 +195,41 @@ class BibleBrowseRepository(private val context: Context) {
         }
     }
 
+    /**
+     * If [query] reads as a Bible reference -- "Yohana 3:16", "1 Wafalme 2", "Zaburi 23:1-6",
+     * or even an English/abbreviated form like "Jn 3:16" or "1 Cor 13" -- resolves it directly
+     * against [BibleBooks]'s existing alias table (the same one citation parsing already uses)
+     * rather than relying on it also happening to match as free text. Requires a trailing
+     * chapter number (a bare book name alone, with nothing else, is too ambiguous to jump on --
+     * it stays a normal typed-so-far query). A verse range keeps only the start verse, since a
+     * jump target is one verse, not a span. Returns null for anything that doesn't parse or
+     * doesn't resolve to a real book/chapter/verse.
+     */
+    fun resolveReference(query: String): SearchResult? {
+        val trimmed = query.trim()
+        val match = REFERENCE_PATTERN.matchEntire(trimmed) ?: return null
+        val bookPart = match.groupValues[1].trim()
+        val chapterNum = match.groupValues[2].toIntOrNull() ?: return null
+        val verseNum = match.groupValues[3].toIntOrNull() ?: 1
+        if (bookPart.isBlank()) return null
+
+        val bookId = BibleBooks.resolveId(bookPart) ?: return null
+        val book = allBooks().firstOrNull { it.id == bookId } ?: return null
+        if (chapterNum < 1 || chapterNum > book.chapterCount) return null
+
+        val text = verseAt(book.id, chapterNum, verseNum) ?: return null
+        return SearchResult(bookId = book.id, bookName = book.name, chapterNum = chapterNum, verseNum = verseNum, text = text)
+    }
+
     private fun likePattern(term: String): String {
         val escaped = term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         return "%$escaped%"
+    }
+
+    companion object {
+        /** Group 1: book name (letters/spaces, optionally starting with a book-numbering digit
+         *  like "1 Yohana" or "1 Cor"). Group 2: chapter. Group 3: optional verse (a trailing
+         *  "-N" range is matched but discarded -- only the start verse is kept). */
+        private val REFERENCE_PATTERN = Regex("^(\\d?\\s?[\\p{L} .]+?)\\s+(\\d{1,3})(?::(\\d{1,3})(?:[-\u2013]\\d{1,3})?)?$")
     }
 }

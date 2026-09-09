@@ -10,8 +10,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SubdirectoryArrowRight
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -79,7 +81,15 @@ fun BibleSearchScreen(
     var scope by remember { mutableStateOf<SearchScope>(SearchScope.WholeBible) }
     var showBookPicker by remember { mutableStateOf(false) }
     var recentSearches by remember { mutableStateOf(recentStore.recentSearches()) }
+    var referenceHit by remember { mutableStateOf<SearchResult?>(null) }
     val focusRequester = remember { FocusRequester() }
+
+    // Resolved on every keystroke, not debounced -- it's a cheap in-memory alias lookup plus
+    // one indexed row fetch, nothing like the LIKE-scan the free-text search below needs
+    // debouncing for.
+    LaunchedEffect(query) {
+        referenceHit = withContext(Dispatchers.IO) { repository.resolveReference(query) }
+    }
 
     LaunchedEffect(query, mode, scope) {
         val term = query.trim()
@@ -116,6 +126,7 @@ fun BibleSearchScreen(
                 placeholder = { Text("Tafuta neno katika Biblia...") },
                 leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                 singleLine = true,
+                shape = RoundedCornerShape(24.dp),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = accent,
@@ -160,6 +171,14 @@ fun BibleSearchScreen(
         }
 
         Spacer(Modifier.height(12.dp))
+
+        referenceHit?.let { hit ->
+            ReferenceJumpRow(hit, accent, onBgDim) {
+                recentStore.record(query.trim())
+                onSelectResult(hit)
+            }
+            Spacer(Modifier.height(12.dp))
+        }
 
         when {
             query.isBlank() && recentSearches.isNotEmpty() -> {
@@ -227,6 +246,43 @@ fun BibleSearchScreen(
             },
             onDismiss = { showBookPicker = false }
         )
+    }
+}
+
+@Composable
+private fun ReferenceJumpRow(
+    hit: SearchResult,
+    accent: Color,
+    onBgDim: Color,
+    onClick: () -> Unit
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(accent.copy(alpha = 0.14f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(Icons.Filled.SubdirectoryArrowRight, contentDescription = null, tint = accent, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                "Nenda kwa ${hit.bookName} ${hit.chapterNum}:${hit.verseNum}",
+                style = MaterialTheme.typography.titleSmall,
+                color = accent
+            )
+            Text(
+                hit.text,
+                style = MaterialTheme.typography.labelMedium,
+                color = onBgDim,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+        }
+        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = onBgDim)
     }
 }
 
