@@ -135,9 +135,15 @@ object YearlyLectionaryPdfGenerator {
             cursor.advance(16)
 
             var lastMonth = -1
-            for (entry in entries) {
+            entries.forEachIndexed { index, entry ->
+                // Every day starts on its own fresh page -- but only in full-text mode. The
+                // compact references-only mode is meant to fit a whole year in a modest page
+                // count (its whole point is scanning many days at a glance), so it keeps the
+                // original "flow, with a whole day's block kept together" behaviour instead.
+                if (index > 0) {
+                    if (mode == PdfContentMode.FULL_TEXT) cursor.newPage() else cursor.advance(10)
+                }
                 if (entry.date.monthValue != lastMonth) {
-                    if (lastMonth != -1) cursor.advance(10)
                     cursor.drawText(monthNames[entry.date.monthValue - 1].uppercase(), monthHeaderPaint())
                     cursor.advance(8)
                     lastMonth = entry.date.monthValue
@@ -148,7 +154,6 @@ object YearlyLectionaryPdfGenerator {
                 } else {
                     cursor.drawDayBlockReferencesOnly(dateLabel, entry.title, entry.color, entry.citations)
                 }
-                cursor.advance(10)
             }
 
             cursor.advance(18)
@@ -300,10 +305,15 @@ object YearlyLectionaryPdfGenerator {
         }
 
         /** Full-text mode: date/title header (kept together), then each reading's label +
-         *  citation heading followed by its full passage text, word-wrapped and paginated --
-         *  a passage can easily run longer than one page, so this can't use the "keep as one
-         *  unit" trick [drawDayBlockReferencesOnly] uses; only the short header is protected
-         *  from an awkward page-top split. */
+         *  citation heading followed by its full passage text, word-wrapped and paginated.
+         *  Each reading is measured before drawing: if it doesn't fit in whatever space is left
+         *  on the current page but WOULD fit entirely on a fresh page, it moves to one rather
+         *  than leaving an orphaned line or two behind -- the exact scenario in the screenshot
+         *  that prompted this (a reading starting three lines from the bottom of a page). A
+         *  reading too long to fit on any single page (a full Old Testament narrative, say)
+         *  still just flows across as many pages as it needs; there's no avoiding that split,
+         *  and forcing it to a fresh page wouldn't change that, so it isn't given the same
+         *  measure-first treatment. */
         fun drawDayBlockFullText(dateLabel: String, title: String, color: LiturgicalColor, citations: List<CitationEntry>) {
             val dp = dateLabelPaint(color)
             val tp = titleRowPaint()
@@ -316,11 +326,39 @@ object YearlyLectionaryPdfGenerator {
 
             val hp = readingHeadingPaint(color)
             val bp = bodyPaint()
+            val fullPageCapacity = PAGE_HEIGHT - 2 * MARGIN
             for (c in citations) {
-                drawWrapped("${c.label} — ${c.citation}", hp)
+                val headingText = "${c.label} — ${c.citation}"
+                val bodyText = c.passageText ?: c.citation
+                val blockHeight = measureWrappedHeight(headingText, hp) + 3 + measureWrappedHeight(bodyText, bp)
+
+                if (y + blockHeight > PAGE_HEIGHT - MARGIN && blockHeight <= fullPageCapacity) {
+                    newPage()
+                }
+
+                drawWrapped(headingText, hp)
                 advance(3)
-                drawWrapped(c.passageText ?: c.citation, bp)
+                drawWrapped(bodyText, bp)
                 advance(10)
+            }
+        }
+
+        /** Sums the height [drawWrapped] would need for [text], without drawing anything --
+         *  same paragraph-splitting logic, kept in step with it deliberately (a mismatch here
+         *  would make the "does this fit on a fresh page" check wrong in exactly the cases it
+         *  exists to get right). */
+        private fun measureWrappedHeight(text: String, paint: TextPaint): Int {
+            if (text.isEmpty()) return 0
+            return text.split("\n").sumOf { paragraph ->
+                if (paragraph.isEmpty()) {
+                    (paint.textSize * 0.9f).toInt()
+                } else {
+                    StaticLayout.Builder
+                        .obtain(paragraph, 0, paragraph.length, paint, CONTENT_WIDTH)
+                        .setLineSpacing(1f, 1.12f)
+                        .build()
+                        .height
+                }
             }
         }
 

@@ -62,6 +62,12 @@ object DailyReadingPdfGenerator {
         cursor.advance(18)
 
         readings.forEachIndexed { index, reading ->
+            val headerH = measureHeaderRowHeight(reading.kindLabel.uppercase(), reading.citation, headingPaint(color), citationPaint(INK_DIM))
+            val bodyH = measureWrappedHeight(reading.passageText, bodyPaint())
+            val responseH = reading.responseText?.let { measureWrappedHeight(it, italicPaint(INK_DIM)) + 8 } ?: 0
+            val blockHeight = headerH + 8 + 1 + 14 + bodyH + responseH
+            cursor.keepTogetherIfPossible(blockHeight)
+
             cursor.drawHeaderRow(reading.kindLabel.uppercase(), reading.citation, headingPaint(color), citationPaint(INK_DIM))
             cursor.advance(8)
             cursor.drawDivider()
@@ -125,6 +131,39 @@ object DailyReadingPdfGenerator {
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.ITALIC)
     }
 
+    /** Mirrors [PageCursor.drawWrapped]'s paragraph-splitting exactly, without drawing anything --
+     *  used to decide, before drawing a reading, whether it needs a fresh page to avoid being
+     *  split off by just a line or two (see [PageCursor.keepTogetherIfPossible]). A mismatch here
+     *  from the real drawing logic would make that decision wrong in exactly the cases it exists
+     *  to get right, so any change to one should be checked against the other. */
+    private fun measureWrappedHeight(text: String, paint: TextPaint): Int {
+        if (text.isEmpty()) return 0
+        return text.split("\n").sumOf { paragraph ->
+            if (paragraph.isEmpty()) {
+                (paint.textSize * 0.9f).toInt()
+            } else {
+                StaticLayout.Builder
+                    .obtain(paragraph, 0, paragraph.length, paint, CONTENT_WIDTH)
+                    .setLineSpacing(2f, 1.12f)
+                    .build()
+                    .height
+            }
+        }
+    }
+
+    /** Mirrors [PageCursor.drawHeaderRow]'s single-line-vs-stacked decision, for the same reason
+     *  [measureWrappedHeight] mirrors [PageCursor.drawWrapped]. */
+    private fun measureHeaderRowHeight(label: String, citation: String, labelPaint: TextPaint, citationPaint: TextPaint): Int {
+        val gap = 12f
+        val labelWidth = labelPaint.measureText(label)
+        val citationWidth = citationPaint.measureText(citation)
+        return if (labelWidth + gap + citationWidth <= CONTENT_WIDTH) {
+            kotlin.math.ceil(labelPaint.descent() - labelPaint.ascent()).toInt()
+        } else {
+            measureWrappedHeight(label, labelPaint) + 2 + measureWrappedHeight(citation, citationPaint)
+        }
+    }
+
     /** Tracks the current page/canvas and vertical write position, creating new pages on demand. */
     private class PageCursor(private val document: PdfDocument) {
         private var page: PdfDocument.Page? = null
@@ -175,6 +214,19 @@ object DailyReadingPdfGenerator {
 
         private fun ensureSpace(needed: Int) {
             if (y + needed > PAGE_HEIGHT - MARGIN) newPage()
+        }
+
+        /** If [height] doesn't fit in whatever space remains on the current page, but WOULD fit
+         *  on a completely fresh page, breaks to one -- keeps a reading from being split off by
+         *  just a line or two (the scenario that prompted this: a short Gospel excerpt starting
+         *  three lines from the bottom of a page). A reading too long to fit any single page is
+         *  left to flow across as many as it needs, same as before -- there's no fresh-page
+         *  trick that changes that outcome, so it isn't given the same treatment. */
+        fun keepTogetherIfPossible(height: Int) {
+            val fullPageCapacity = PAGE_HEIGHT - 2 * MARGIN
+            if (y + height > PAGE_HEIGHT - MARGIN && height <= fullPageCapacity) {
+                newPage()
+            }
         }
 
         fun drawAccentBar(color: LiturgicalColor) {
