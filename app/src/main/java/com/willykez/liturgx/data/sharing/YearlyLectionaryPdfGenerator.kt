@@ -136,14 +136,15 @@ object YearlyLectionaryPdfGenerator {
 
             var lastMonth = -1
             entries.forEachIndexed { index, entry ->
-                // Every day starts on its own fresh page -- but only in full-text mode. The
-                // compact references-only mode is meant to fit a whole year in a modest page
-                // count (its whole point is scanning many days at a glance), so it keeps the
-                // original "flow, with a whole day's block kept together" behaviour instead.
+                val isNewMonth = entry.date.monthValue != lastMonth
+                // Every day starts on its own fresh page in full-text mode (see below). In the
+                // compact references-only mode, days still flow several to a page, but a new
+                // month now gets the same fresh-page treatment a wall calendar gives it -- only
+                // a plain day-to-day transition keeps the old "just add spacing" behaviour.
                 if (index > 0) {
-                    if (mode == PdfContentMode.FULL_TEXT) cursor.newPage() else cursor.advance(10)
+                    if (mode == PdfContentMode.FULL_TEXT || isNewMonth) cursor.newPage() else cursor.advance(10)
                 }
-                if (entry.date.monthValue != lastMonth) {
+                if (isNewMonth) {
                     cursor.drawText(monthNames[entry.date.monthValue - 1].uppercase(), monthHeaderPaint())
                     cursor.advance(8)
                     lastMonth = entry.date.monthValue

@@ -6,7 +6,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.willykez.liturgx.core.RegionSettings
-import com.willykez.liturgx.data.DayResult
 import com.willykez.liturgx.data.LectionaryRepository
 import com.willykez.liturgx.data.SettingsStore
 import com.willykez.liturgx.notifications.ReminderRequestCodes

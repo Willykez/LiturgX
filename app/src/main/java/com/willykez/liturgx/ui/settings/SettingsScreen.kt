@@ -11,7 +11,6 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,8 +23,22 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FormatListNumbered
+import androidx.compose.material.icons.filled.FormatQuote
+import androidx.compose.material.icons.filled.Highlight
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.NoteAlt
+import androidx.compose.material.icons.filled.Notes
+import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.TextFields
+import androidx.compose.material.icons.filled.TextIncrease
+import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -34,8 +47,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -57,9 +68,12 @@ import com.willykez.liturgx.data.bible.ReadingPrefsStore
 import com.willykez.liturgx.data.bible.ScriptureFontStyle
 import com.willykez.liturgx.data.sharing.PdfShareUtils
 import com.willykez.liturgx.data.sharing.YearlyLectionaryPdfGenerator
-import com.willykez.liturgx.ui.components.DividedRow
-import com.willykez.liturgx.ui.components.SectionLabel
-import com.willykez.liturgx.ui.components.SettingsRow
+import com.willykez.liturgx.ui.components.SettingsGroupCard
+import com.willykez.liturgx.ui.components.SettingsIconRow
+import com.willykez.liturgx.ui.components.SettingsRowDivider
+import com.willykez.liturgx.ui.components.SettingsSectionLabel
+import com.willykez.liturgx.ui.components.SettingsSegmentedRow
+import com.willykez.liturgx.ui.components.SettingsSwitchRow
 import com.willykez.liturgx.ui.theme.TextScale
 import com.willykez.liturgx.ui.theme.ThemeMode
 import kotlinx.coroutines.Dispatchers
@@ -67,15 +81,30 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
+/** One fixed color per row/section, One UI-style -- helps the eye tell rows apart at a glance
+ *  rather than everything sharing one flat accent, while the liturgical accent colour is still
+ *  what drives every selection state (segmented buttons, switches). */
+private val BLUE = Color(0xFF4285F4)
+private val PURPLE = Color(0xFF8E24AA)
+private val TEAL = Color(0xFF00897B)
+private val ORANGE = Color(0xFFFB8C00)
+private val RED = Color(0xFFE53935)
+private val INDIGO = Color(0xFF3949AB)
+private val PINK = Color(0xFFD81B60)
+private val GREEN = Color(0xFF43A047)
+private val BROWN = Color(0xFF6D4C41)
+private val GRAY = Color(0xFF757575)
+
 /**
  * Settings content for the app-wide [androidx.compose.material3.ModalBottomSheet] (see
  * [com.willykez.liturgx.ui.LiturgXApp]).
  *
- * Layout language borrowed from BibliaApp: a plain hairline-divided list under uppercase
- * section labels, instead of the previous stack of rounded, tinted "cards". Every setting,
- * callback and piece of copy below is unchanged from before - only the arrangement is new.
- * The liturgical accent colour of the day still drives every selection highlight, which is
- * what keeps this screen feeling like LiturgX rather than a Biblia reskin.
+ * Layout language: Samsung One UI / Google Settings-style grouped cards -- a rounded card per
+ * section, a colored icon circle per row, MD3 segmented buttons for the multi-choice pickers
+ * (theme mode, font style, PDF export mode) -- replacing the earlier flat hairline-list design.
+ * Every setting, callback and piece of copy is unchanged from before; only the visual language
+ * is new. The liturgical accent colour of the day still drives every selection state, which is
+ * what keeps this screen feeling like LiturgX rather than a straight OneUI reskin.
  */
 @Composable
 fun SettingsSheetContent(
@@ -142,211 +171,214 @@ fun SettingsSheetContent(
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
 
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+        Column(
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+        ) {
+            Spacer(Modifier.height(4.dp))
+
             // --- USOMAJI (Bible reading preferences) --------------------------------
-            SectionLabel("USOMAJI")
-            DividedRow {
-                SettingsRow(
-                    title = "Namba za mstari",
-                    subtitle = "Onyesha namba ya kila mstari katika Biblia",
-                ) {
-                    Switch(
+            Column {
+                SettingsSectionLabel("USOMAJI")
+                SettingsGroupCard {
+                    SettingsSwitchRow(
+                        icon = Icons.Filled.FormatListNumbered,
+                        iconBackground = BLUE,
+                        title = "Namba za mstari",
+                        subtitle = "Onyesha namba ya kila mstari katika Biblia",
                         checked = verseNumbersVisible,
+                        accent = accent,
                         onCheckedChange = {
                             verseNumbersVisible = it
                             readingPrefs.saveVerseNumbersVisible(it)
                         },
-                        colors = SwitchDefaults.colors(checkedTrackColor = accent),
                     )
-                }
-            }
-            DividedRow {
-                Column(Modifier.padding(horizontal = 20.dp, vertical = 14.dp)) {
-                    Text("Aina ya maandishi", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onBackground)
-                    Spacer(Modifier.height(10.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                        listOf(
-                            ScriptureFontStyle.SERIF to "Klasiki",
-                            ScriptureFontStyle.SANS to "Rahisi",
-                            ScriptureFontStyle.MONO to "Namba",
-                        ).forEach { (style, label) ->
-                            val selected = style == fontStyle
-                            Text(
-                                label,
-                                style = MaterialTheme.typography.labelLarge,
-                                color = if (selected) accent else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.clickable {
-                                    fontStyle = style
-                                    readingPrefs.saveFontStyle(style)
-                                },
-                            )
-                        }
+                    SettingsRowDivider()
+                    SettingsIconRow(icon = Icons.Filled.TextFields, iconBackground = PURPLE, title = "Aina ya maandishi")
+                    Column(Modifier.padding(start = 66.dp, end = 16.dp, bottom = 14.dp)) {
+                        SettingsSegmentedRow(
+                            options = listOf(
+                                ScriptureFontStyle.SERIF to "Klasiki",
+                                ScriptureFontStyle.SANS to "Rahisi",
+                                ScriptureFontStyle.MONO to "Namba",
+                            ),
+                            selected = fontStyle,
+                            accent = accent,
+                            onSelect = { style ->
+                                fontStyle = style
+                                readingPrefs.saveFontStyle(style)
+                            },
+                        )
                     }
-                }
-            }
-            DividedRow(showDivider = false) {
-                SettingsRow(
-                    title = "Hali ya kusoma: Aya",
-                    subtitle = "Onyesha kama kitabu, si mstari kwa mstari",
-                ) {
-                    Switch(
+                    SettingsRowDivider()
+                    SettingsSwitchRow(
+                        icon = Icons.Filled.Notes,
+                        iconBackground = TEAL,
+                        title = "Hali ya kusoma: Aya",
+                        subtitle = "Onyesha kama kitabu, si mstari kwa mstari",
                         checked = paragraphMode,
+                        accent = accent,
                         onCheckedChange = {
                             paragraphMode = it
                             readingPrefs.saveParagraphMode(it)
                         },
-                        colors = SwitchDefaults.colors(checkedTrackColor = accent),
                     )
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
             // --- UKUMBUSHO ---------------------------------------------------------
-            SectionLabel("UKUMBUSHO")
-            DividedRow {
-                SettingsRow(
-                    title = "Kikumbusho cha Kila Siku",
-                    subtitle = "Masomo ya Kiliturujia ya siku, kwa wakati unaochagua",
-                ) {
-                    ReminderSwitch(checked = reminderEnabled, onCheckedChange = onReminderEnabledChange, accent = accent)
-                }
-            }
-            if (reminderEnabled) {
-                DividedRow {
-                    SettingsRow(
-                        title = "Wakati",
-                        subtitle = "%02d:%02d".format(reminderHour, reminderMinute),
-                        onClick = { showTimePicker(reminderHour, reminderMinute, onReminderTimeChange) },
-                    )
-                }
-            }
-            DividedRow {
-                SettingsRow(
-                    title = "Neno la Kila Siku",
-                    subtitle = "Andiko fupi la kutafakari, huru dhidi ya masomo ya siku",
-                ) {
-                    ReminderSwitch(checked = verseReminderEnabled, onCheckedChange = onVerseReminderEnabledChange, accent = accent)
-                }
-            }
-            if (verseReminderEnabled) {
-                DividedRow(showDivider = false) {
-                    SettingsRow(
-                        title = "Wakati",
-                        subtitle = "%02d:%02d".format(verseReminderHour, verseReminderMinute),
-                        onClick = { showTimePicker(verseReminderHour, verseReminderMinute, onVerseReminderTimeChange) },
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(12.dp))
-            SectionLabel("MWONEKANO")
-            DividedRow {
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    ThemeMode.entries.forEach { mode ->
-                        val selected = mode == themeMode
-                        Text(
-                            mode.label,
-                            style = MaterialTheme.typography.labelLarge,
-                            color = if (selected) accent else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.clickable { onThemeModeChange(mode) },
+            Column {
+                SettingsSectionLabel("UKUMBUSHO")
+                SettingsGroupCard {
+                    SettingsIconRow(
+                        icon = Icons.Filled.NotificationsActive,
+                        iconBackground = ORANGE,
+                        title = "Kikumbusho cha Kila Siku",
+                        subtitle = "Masomo ya Kiliturujia ya siku, kwa wakati unaochagua",
+                    ) {
+                        ReminderSwitch(checked = reminderEnabled, onCheckedChange = onReminderEnabledChange, accent = accent)
+                    }
+                    if (reminderEnabled) {
+                        SettingsRowDivider()
+                        SettingsIconRow(
+                            icon = Icons.Filled.NotificationsActive,
+                            iconBackground = ORANGE,
+                            title = "Wakati",
+                            subtitle = "%02d:%02d".format(reminderHour, reminderMinute),
+                            onClick = { showTimePicker(reminderHour, reminderMinute, onReminderTimeChange) },
+                        )
+                    }
+                    SettingsRowDivider()
+                    SettingsIconRow(
+                        icon = Icons.Filled.FormatQuote,
+                        iconBackground = RED,
+                        title = "Neno la Kila Siku",
+                        subtitle = "Andiko fupi la kutafakari, huru dhidi ya masomo ya siku",
+                    ) {
+                        ReminderSwitch(checked = verseReminderEnabled, onCheckedChange = onVerseReminderEnabledChange, accent = accent)
+                    }
+                    if (verseReminderEnabled) {
+                        SettingsRowDivider()
+                        SettingsIconRow(
+                            icon = Icons.Filled.FormatQuote,
+                            iconBackground = RED,
+                            title = "Wakati",
+                            subtitle = "%02d:%02d".format(verseReminderHour, verseReminderMinute),
+                            onClick = { showTimePicker(verseReminderHour, verseReminderMinute, onVerseReminderTimeChange) },
                         )
                     }
                 }
             }
-            DividedRow(showDivider = false) {
-                Column(Modifier.padding(horizontal = 20.dp, vertical = 14.dp)) {
-                    Text("Ukubwa wa Maandishi", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onBackground)
-                    Spacer(Modifier.height(4.dp))
-                    TextScaleSlider(textScale = textScale, onTextScaleChange = onTextScaleChange, accent = accent)
+
+            // --- MWONEKANO -----------------------------------------------------------
+            Column {
+                SettingsSectionLabel("MWONEKANO")
+                SettingsGroupCard {
+                    SettingsIconRow(icon = Icons.Filled.Palette, iconBackground = INDIGO, title = "Mwonekano")
+                    Column(Modifier.padding(start = 66.dp, end = 16.dp, bottom = 14.dp)) {
+                        SettingsSegmentedRow(
+                            options = ThemeMode.entries.map { it to it.label },
+                            selected = themeMode,
+                            accent = accent,
+                            onSelect = onThemeModeChange,
+                        )
+                    }
+                    SettingsRowDivider()
+                    SettingsIconRow(icon = Icons.Filled.TextIncrease, iconBackground = PINK, title = "Ukubwa wa Maandishi")
+                    Column(Modifier.padding(start = 66.dp, end = 16.dp, bottom = 10.dp)) {
+                        TextScaleSlider(textScale = textScale, onTextScaleChange = onTextScaleChange, accent = accent)
+                    }
                 }
             }
 
             // --- JIMBO (region-specific liturgical rules) --------------------------
-            Spacer(Modifier.height(12.dp))
-            SectionLabel("JIMBO LAKO")
-            DividedRow {
-                SettingsRow(
-                    title = "Epifania Ihamishiwe Dominika",
-                    subtitle = "Baadhi ya majimbo huadhimisha Jan 6 daima; mengine Dominika ya Jan 2-8",
-                ) {
-                    Switch(
+            Column {
+                SettingsSectionLabel("JIMBO LAKO")
+                SettingsGroupCard {
+                    SettingsSwitchRow(
+                        icon = Icons.Filled.Star,
+                        iconBackground = GREEN,
+                        title = "Epifania Ihamishiwe Dominika",
+                        subtitle = "Baadhi ya majimbo huadhimisha Jan 6 daima; mengine Dominika ya Jan 2-8",
                         checked = region.epiphanyMode == EpiphanyMode.TRANSFERRED,
+                        accent = accent,
                         onCheckedChange = { checked ->
                             onRegionChange(region.copy(epiphanyMode = if (checked) EpiphanyMode.TRANSFERRED else EpiphanyMode.FIXED_JAN6))
                         },
-                        colors = SwitchDefaults.colors(checkedTrackColor = accent),
                     )
-                }
-            }
-            DividedRow(showDivider = false) {
-                SettingsRow(
-                    title = "Shika Alhamisi",
-                    subtitle = "Kupaa kwa Bwana na Fungu Takatifu vishikwe Alhamisi, si Dominika",
-                ) {
-                    Switch(
+                    SettingsRowDivider()
+                    SettingsSwitchRow(
+                        icon = Icons.Filled.Upload,
+                        iconBackground = GREEN,
+                        title = "Shika Alhamisi",
+                        subtitle = "Kupaa kwa Bwana na Fungu Takatifu vishikwe Alhamisi, si Dominika",
                         checked = region.keepThursdaySolemnities,
+                        accent = accent,
                         onCheckedChange = { onRegionChange(region.copy(keepThursdaySolemnities = it)) },
-                        colors = SwitchDefaults.colors(checkedTrackColor = accent),
                     )
                 }
             }
 
             // --- KALENDA YA MWAKA ---------------------------------------------------
-            Spacer(Modifier.height(12.dp))
-            SectionLabel("KALENDA YA MWAKA")
-            DividedRow(showDivider = false) {
-                Column(Modifier.padding(horizontal = 20.dp, vertical = 14.dp)) {
-                    Text(
-                        "Pakua orodha ya masomo ya Dominika zote na Sikukuu Maalum za mwaka mzima, tayari kuchapishwa.",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+            Column {
+                SettingsSectionLabel("KALENDA YA MWAKA")
+                SettingsGroupCard {
+                    SettingsIconRow(
+                        icon = Icons.Filled.CalendarMonth,
+                        iconBackground = BROWN,
+                        title = "Pakua Kalenda ya Mwaka",
+                        subtitle = "Dominika zote na Sikukuu Maalum za mwaka mzima, tayari kuchapishwa",
                     )
-                    Spacer(Modifier.height(10.dp))
-                    YearlyPdfExportButton(region = region, accent = accent)
+                    Column(Modifier.padding(start = 66.dp, end = 16.dp, bottom = 14.dp)) {
+                        YearlyPdfExportButton(region = region, accent = accent)
+                    }
                 }
             }
 
             // --- DATA YAKO (bookmarks / highlights / notes from the Bible tab) ------
-            Spacer(Modifier.height(12.dp))
-            SectionLabel("DATA YAKO")
-            dataVersion.let {
-                ClearableDataRow(
-                    title = "Alama",
-                    subtitle = "${bibleUserData.bookmarkCount()} mstari umewekwa alama",
-                    expanded = clearBookmarksExpanded,
-                    onToggleExpanded = { clearBookmarksExpanded = !clearBookmarksExpanded },
-                    onConfirmClear = { bibleUserData.clearBookmarks(); clearBookmarksExpanded = false; dataVersion++ },
-                )
-                ClearableDataRow(
-                    title = "Iliyoangaziwa",
-                    subtitle = "${bibleUserData.highlightCount()} mstari umeangaziwa",
-                    expanded = clearHighlightsExpanded,
-                    onToggleExpanded = { clearHighlightsExpanded = !clearHighlightsExpanded },
-                    onConfirmClear = { bibleUserData.clearHighlights(); clearHighlightsExpanded = false; dataVersion++ },
-                )
-                ClearableDataRow(
-                    title = "Dokezo",
-                    subtitle = "${bibleUserData.noteCount()} dokezo limehifadhiwa",
-                    expanded = clearNotesExpanded,
-                    onToggleExpanded = { clearNotesExpanded = !clearNotesExpanded },
-                    onConfirmClear = { bibleUserData.clearNotes(); clearNotesExpanded = false; dataVersion++ },
-                )
+            Column {
+                SettingsSectionLabel("DATA YAKO")
+                SettingsGroupCard {
+                    dataVersion.let {
+                        ClearableDataRow(
+                            icon = Icons.Filled.Bookmark,
+                            title = "Alama",
+                            subtitle = "${bibleUserData.bookmarkCount()} mstari umewekwa alama",
+                            expanded = clearBookmarksExpanded,
+                            onToggleExpanded = { clearBookmarksExpanded = !clearBookmarksExpanded },
+                            onConfirmClear = { bibleUserData.clearBookmarks(); clearBookmarksExpanded = false; dataVersion++ },
+                        )
+                        SettingsRowDivider()
+                        ClearableDataRow(
+                            icon = Icons.Filled.Highlight,
+                            title = "Iliyoangaziwa",
+                            subtitle = "${bibleUserData.highlightCount()} mstari umeangaziwa",
+                            expanded = clearHighlightsExpanded,
+                            onToggleExpanded = { clearHighlightsExpanded = !clearHighlightsExpanded },
+                            onConfirmClear = { bibleUserData.clearHighlights(); clearHighlightsExpanded = false; dataVersion++ },
+                        )
+                        SettingsRowDivider()
+                        ClearableDataRow(
+                            icon = Icons.Filled.NoteAlt,
+                            title = "Dokezo",
+                            subtitle = "${bibleUserData.noteCount()} dokezo limehifadhiwa",
+                            expanded = clearNotesExpanded,
+                            onToggleExpanded = { clearNotesExpanded = !clearNotesExpanded },
+                            onConfirmClear = { bibleUserData.clearNotes(); clearNotesExpanded = false; dataVersion++ },
+                        )
+                    }
+                }
             }
 
             // --- KUHUSU --------------------------------------------------------------
-            Spacer(Modifier.height(12.dp))
-            SectionLabel("KUHUSU")
-            DividedRow(showDivider = false) {
-                Column(Modifier.padding(horizontal = 20.dp, vertical = 10.dp)) {
-                    Text("LiturgX", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onBackground)
-                    Text(
-                        "Masomo ya Kila Siku kwa Kiswahili \u2014 kalenda ya kiliturujia, Biblia na watakatifu",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 2.dp),
+            Column {
+                SettingsSectionLabel("KUHUSU")
+                SettingsGroupCard {
+                    SettingsIconRow(
+                        icon = Icons.Filled.Info,
+                        iconBackground = GRAY,
+                        title = "LiturgX",
+                        subtitle = "Masomo ya Kila Siku kwa Kiswahili \u2014 kalenda ya kiliturujia, Biblia na watakatifu",
                     )
                 }
             }
@@ -362,7 +394,7 @@ private fun ReminderSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit,
         ActivityResultContracts.RequestPermission()
     ) { granted -> onCheckedChange(granted) }
 
-    Switch(
+    androidx.compose.material3.Switch(
         checked = checked,
         onCheckedChange = { wantsOn ->
             if (wantsOn && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -374,7 +406,7 @@ private fun ReminderSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit,
                 onCheckedChange(wantsOn)
             }
         },
-        colors = SwitchDefaults.colors(checkedTrackColor = accent),
+        colors = androidx.compose.material3.SwitchDefaults.colors(checkedTrackColor = accent),
     )
 }
 
@@ -407,28 +439,20 @@ private fun YearlyPdfExportButton(region: RegionSettings, accent: Color) {
     val scope = rememberCoroutineScope()
     var isGenerating by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    // Matches the theme-mode / font-style segmented text pickers elsewhere on this screen,
-    // rather than importing Material3 FilterChip pills -- keeps this one flat/editorial rather
-    // than mixing in a rounded-pill style that doesn't appear anywhere else on the sheet.
     var mode by remember { mutableStateOf(YearlyLectionaryPdfGenerator.PdfContentMode.REFERENCES_ONLY) }
     val year = remember { LocalDate.now().year }
     val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
 
-    Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-        listOf(
+    SettingsSegmentedRow(
+        options = listOf(
             YearlyLectionaryPdfGenerator.PdfContentMode.REFERENCES_ONLY to "Marejeo Pekee",
             YearlyLectionaryPdfGenerator.PdfContentMode.FULL_TEXT to "Masomo Kamili",
-        ).forEach { (m, label) ->
-            val selected = m == mode
-            Text(
-                label,
-                style = MaterialTheme.typography.labelLarge,
-                color = if (selected) accent else onBgDim,
-                modifier = Modifier.clickable { mode = m },
-            )
-        }
-    }
-    Spacer(Modifier.height(6.dp))
+        ),
+        selected = mode,
+        accent = accent,
+        onSelect = { mode = it },
+    )
+    Spacer(Modifier.height(8.dp))
     Text(
         if (mode == YearlyLectionaryPdfGenerator.PdfContentMode.REFERENCES_ONLY)
             "Tarehe, jina, rangi na marejeo ya masomo -- ukurasa mfupi, rahisi kuchapisha."
@@ -484,32 +508,32 @@ private fun YearlyPdfExportButton(region: RegionSettings, accent: Color) {
     }
 }
 
-/** "Futa Alama/Iliyoangaziwa/Dokezo" row - ported from BibliaApp's DATA YAKO pattern: tap the
- *  row to reveal a confirm button, rather than clearing on the first tap. */
+/** "Futa Alama/Iliyoangaziwa/Dokezo" row - tap the row to reveal a confirm button, rather than
+ *  clearing on the first tap. */
 @Composable
 private fun ClearableDataRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     subtitle: String,
     expanded: Boolean,
     onToggleExpanded: () -> Unit,
     onConfirmClear: () -> Unit,
 ) {
-    DividedRow {
-        Column {
-            SettingsRow(
-                title = "Futa $title",
-                subtitle = subtitle,
-                titleColor = MaterialTheme.colorScheme.error,
-                onClick = onToggleExpanded,
-            )
-            AnimatedVisibility(visible = expanded, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 12.dp),
-                    horizontalArrangement = Arrangement.End,
-                ) {
-                    OutlinedButton(onClick = onConfirmClear) {
-                        Text("Thibitisha")
-                    }
+    Column {
+        SettingsIconRow(
+            icon = icon,
+            iconBackground = RED,
+            title = "Futa $title",
+            subtitle = subtitle,
+            onClick = onToggleExpanded,
+        )
+        AnimatedVisibility(visible = expanded, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(start = 66.dp, end = 16.dp, bottom = 12.dp),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                OutlinedButton(onClick = onConfirmClear) {
+                    Text("Thibitisha")
                 }
             }
         }

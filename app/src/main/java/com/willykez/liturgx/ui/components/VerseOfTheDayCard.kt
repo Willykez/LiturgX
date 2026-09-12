@@ -19,7 +19,7 @@ import com.willykez.liturgx.ui.theme.seasonAccent
 import com.willykez.liturgx.ui.theme.seasonAccentSoft
 
 /** The day's Gospel, trimmed to its first verse -- short enough to actually read at a glance,
- *  unlike showing the whole Gospel reading here. Sits alongside [StreakCard] on Home. */
+ *  unlike showing the whole Gospel reading here. Shown at the top of Home. */
 @Composable
 fun VerseOfTheDayCard(
     citation: String,

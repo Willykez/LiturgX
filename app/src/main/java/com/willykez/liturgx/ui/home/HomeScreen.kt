@@ -35,7 +35,6 @@ import com.willykez.liturgx.data.bible.BibleRepository
 import com.willykez.liturgx.ui.components.DailyReadingsView
 import com.willykez.liturgx.ui.components.LiturgicalSeal
 import com.willykez.liturgx.ui.components.VerseOfTheDayCard
-import com.willykez.liturgx.ui.theme.seasonAccent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.time.LocalDate

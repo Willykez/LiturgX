@@ -44,18 +44,5 @@ class ProgressStore(context: Context) {
             }
             return count
         }
-
-        /** The longest run of consecutive days ever recorded, for a small "record" note. */
-        fun longestStreak(opened: Set<LocalDate>): Int {
-            if (opened.isEmpty()) return 0
-            val sorted = opened.sorted()
-            var longest = 1
-            var run = 1
-            for (i in 1 until sorted.size) {
-                run = if (sorted[i] == sorted[i - 1].plusDays(1)) run + 1 else 1
-                if (run > longest) longest = run
-            }
-            return longest
-        }
     }
 }
