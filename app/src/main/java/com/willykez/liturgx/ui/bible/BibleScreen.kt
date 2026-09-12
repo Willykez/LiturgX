@@ -8,14 +8,11 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,7 +26,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.willykez.liturgx.core.LiturgicalColor
@@ -38,8 +34,11 @@ import com.willykez.liturgx.data.bible.BibleBrowseRepository
 import com.willykez.liturgx.data.bible.ReadingPrefsStore
 import com.willykez.liturgx.data.bible.Testament
 import com.willykez.liturgx.ui.BibleJumpTarget
+import com.willykez.liturgx.ui.components.OneUiGroupCard
+import com.willykez.liturgx.ui.components.OneUiIconRow
+import com.willykez.liturgx.ui.components.OneUiRowDivider
+import com.willykez.liturgx.ui.components.OneUiSectionLabel
 import com.willykez.liturgx.ui.theme.seasonAccent
-import com.willykez.liturgx.ui.theme.seasonAccentSoft
 
 /**
  * Route within the Bible tab's own small internal navigation -- state-driven rather than a
@@ -186,12 +185,12 @@ private fun BookListScreen(
 
     LazyColumn(
         Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(20.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         item {
             Row(
-                Modifier.fillMaxWidth(),
+                Modifier.fillMaxWidth().padding(horizontal = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -203,50 +202,46 @@ private fun BookListScreen(
                     Icon(Icons.Filled.Search, contentDescription = "Tafuta andiko", tint = accent)
                 }
             }
-            Spacer(Modifier.height(16.dp))
         }
-
-        item { SectionHeader("Agano la Kale", accent) }
-        items(oldTestament) { book -> BookRow(book, color, onClick = { onSelectBook(book) }) }
 
         item {
-            Spacer(Modifier.height(10.dp))
-            SectionHeader("Agano Jipya", accent)
+            Column {
+                OneUiSectionLabel("AGANO LA KALE", modifier = Modifier.padding(start = 4.dp))
+                OneUiGroupCard {
+                    oldTestament.forEachIndexed { index, book ->
+                        BookRow(book, accent, onClick = { onSelectBook(book) })
+                        if (index != oldTestament.lastIndex) OneUiRowDivider()
+                    }
+                }
+            }
         }
-        items(newTestament) { book -> BookRow(book, color, onClick = { onSelectBook(book) }) }
 
-        item { Spacer(Modifier.height(20.dp)) }
+        item {
+            Column {
+                OneUiSectionLabel("AGANO JIPYA", modifier = Modifier.padding(start = 4.dp))
+                OneUiGroupCard {
+                    newTestament.forEachIndexed { index, book ->
+                        BookRow(book, accent, onClick = { onSelectBook(book) })
+                        if (index != newTestament.lastIndex) OneUiRowDivider()
+                    }
+                }
+            }
+        }
+
+        item { Spacer(Modifier.height(4.dp)) }
     }
 }
 
 @Composable
-private fun SectionHeader(text: String, accent: androidx.compose.ui.graphics.Color) {
-    Text(
-        text.uppercase(),
-        style = MaterialTheme.typography.labelMedium,
-        color = accent,
-        modifier = Modifier.padding(vertical = 6.dp)
-    )
-}
-
-@Composable
-private fun BookRow(book: BibleBookInfo, color: LiturgicalColor, onClick: () -> Unit) {
-    val onBg = MaterialTheme.colorScheme.onBackground
+private fun BookRow(book: BibleBookInfo, accent: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
     val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(seasonAccentSoft(color))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+    OneUiIconRow(
+        icon = Icons.Filled.MenuBook,
+        iconBackground = accent,
+        title = book.name,
+        onClick = onClick,
     ) {
-        Text(book.name, style = MaterialTheme.typography.bodyLarge, color = onBg)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Sura ${book.chapterCount}", style = MaterialTheme.typography.labelSmall, color = onBgDim)
-            Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = onBgDim, modifier = Modifier.size(18.dp))
-        }
+        Text("Sura ${book.chapterCount}", style = MaterialTheme.typography.labelSmall, color = onBgDim)
+        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = onBgDim, modifier = Modifier.size(18.dp))
     }
 }

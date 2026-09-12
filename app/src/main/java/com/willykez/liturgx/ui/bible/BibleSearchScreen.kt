@@ -5,13 +5,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SubdirectoryArrowRight
 import androidx.compose.material3.CircularProgressIndicator
@@ -50,8 +51,10 @@ import com.willykez.liturgx.data.bible.BibleBrowseRepository
 import com.willykez.liturgx.data.bible.SearchMode
 import com.willykez.liturgx.data.bible.SearchResult
 import com.willykez.liturgx.data.bible.SearchScope
+import com.willykez.liturgx.ui.components.OneUiGroupCard
+import com.willykez.liturgx.ui.components.OneUiIconRow
+import com.willykez.liturgx.ui.components.OneUiRowDivider
 import com.willykez.liturgx.ui.theme.seasonAccent
-import com.willykez.liturgx.ui.theme.seasonAccentSoft
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -173,30 +176,33 @@ fun BibleSearchScreen(
         Spacer(Modifier.height(12.dp))
 
         referenceHit?.let { hit ->
-            ReferenceJumpRow(hit, accent, onBgDim) {
-                recentStore.record(query.trim())
-                onSelectResult(hit)
+            Box(Modifier.padding(horizontal = 16.dp)) {
+                ReferenceJumpRow(hit, accent, onBgDim) {
+                    recentStore.record(query.trim())
+                    onSelectResult(hit)
+                }
             }
             Spacer(Modifier.height(12.dp))
         }
 
         when {
             query.isBlank() && recentSearches.isNotEmpty() -> {
-                Column(Modifier.padding(horizontal = 20.dp)) {
-                    Text("Utafutaji wa Karibuni", style = MaterialTheme.typography.labelMedium, color = onBgDim)
-                    Spacer(Modifier.height(8.dp))
-                    recentSearches.forEach { term ->
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(10.dp))
-                                .clickable { query = term }
-                                .padding(vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Filled.History, contentDescription = null, tint = onBgDim, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(10.dp))
-                            Text(term, style = MaterialTheme.typography.bodyMedium, color = onBg)
+                Column(Modifier.padding(horizontal = 16.dp)) {
+                    Text(
+                        "Utafutaji wa Karibuni",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = onBgDim,
+                        modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
+                    )
+                    OneUiGroupCard {
+                        recentSearches.forEachIndexed { index, term ->
+                            OneUiIconRow(
+                                icon = Icons.Filled.History,
+                                iconBackground = onBgDim,
+                                title = term,
+                                onClick = { query = term },
+                            )
+                            if (index != recentSearches.lastIndex) OneUiRowDivider()
                         }
                     }
                 }
@@ -216,20 +222,24 @@ fun BibleSearchScreen(
             }
             else -> {
                 LazyColumn(
-                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
                 ) {
-                    items(results) { result ->
-                        SearchResultRow(
-                            result = result,
-                            highlightTerms = if (mode == SearchMode.ANY_WORD) {
-                                query.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
-                            } else {
-                                listOf(query.trim())
-                            },
-                            color = color,
-                            onClick = { onSelectResult(result) }
-                        )
+                    item {
+                        OneUiGroupCard {
+                            results.forEachIndexed { index, result ->
+                                SearchResultRow(
+                                    result = result,
+                                    highlightTerms = if (mode == SearchMode.ANY_WORD) {
+                                        query.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
+                                    } else {
+                                        listOf(query.trim())
+                                    },
+                                    color = color,
+                                    onClick = { onSelectResult(result) }
+                                )
+                                if (index != results.lastIndex) OneUiRowDivider()
+                            }
+                        }
                     }
                     item { Spacer(Modifier.height(20.dp)) }
                 }
@@ -256,33 +266,17 @@ private fun ReferenceJumpRow(
     onBgDim: Color,
     onClick: () -> Unit
 ) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(accent.copy(alpha = 0.14f))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(Icons.Filled.SubdirectoryArrowRight, contentDescription = null, tint = accent, modifier = Modifier.size(20.dp))
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(
-                "Nenda kwa ${hit.bookName} ${hit.chapterNum}:${hit.verseNum}",
-                style = MaterialTheme.typography.titleSmall,
-                color = accent
-            )
-            Text(
-                hit.text,
-                style = MaterialTheme.typography.labelMedium,
-                color = onBgDim,
-                maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-            )
+    OneUiGroupCard {
+        OneUiIconRow(
+            icon = Icons.Filled.SubdirectoryArrowRight,
+            iconBackground = accent,
+            title = "Nenda kwa ${hit.bookName} ${hit.chapterNum}:${hit.verseNum}",
+            subtitle = hit.text,
+            subtitleMaxLines = 1,
+            onClick = onClick,
+        ) {
+            Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = onBgDim)
         }
-        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = onBgDim)
     }
 }
 
@@ -306,6 +300,7 @@ private fun BookPickerDialog(
     onDismiss: () -> Unit
 ) {
     val onBg = MaterialTheme.colorScheme.onBackground
+    val accent = MaterialTheme.colorScheme.primary
     Dialog(onDismissRequest = onDismiss) {
         Column(
             Modifier
@@ -321,23 +316,24 @@ private fun BookPickerDialog(
                 color = onBg,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
             )
-            LazyColumn {
-                items(books) { book ->
-                    Text(
-                        book.name,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = onBg,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onSelect(book) }
-                            .padding(horizontal = 20.dp, vertical = 12.dp)
-                    )
+            LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp)) {
+                item {
+                    OneUiGroupCard {
+                        books.forEachIndexed { index, book ->
+                            OneUiIconRow(
+                                icon = Icons.Filled.MenuBook,
+                                iconBackground = accent,
+                                title = book.name,
+                                onClick = { onSelect(book) },
+                            )
+                            if (index != books.lastIndex) OneUiRowDivider()
+                        }
+                    }
                 }
             }
         }
     }
 }
-
 @Composable
 private fun SearchResultRow(
     result: SearchResult,
@@ -351,21 +347,28 @@ private fun SearchResultRow(
     Column(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(seasonAccentSoft(color))
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 10.dp)
+            .padding(horizontal = 16.dp, vertical = 14.dp)
     ) {
-        Text(
-            "${result.bookName} ${result.chapterNum}:${result.verseNum}",
-            style = MaterialTheme.typography.titleSmall,
-            color = accent
-        )
-        Spacer(Modifier.height(2.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier.size(36.dp).clip(CircleShape).background(accent),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Filled.Search, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+            }
+            Spacer(Modifier.width(14.dp))
+            Text(
+                "${result.bookName} ${result.chapterNum}:${result.verseNum}",
+                style = MaterialTheme.typography.titleSmall,
+                color = accent
+            )
+        }
         Text(
             highlightMatches(result.text, highlightTerms, accent),
             style = MaterialTheme.typography.bodyMedium,
-            color = onBg
+            color = onBg,
+            modifier = Modifier.padding(start = 50.dp, top = 2.dp)
         )
     }
 }

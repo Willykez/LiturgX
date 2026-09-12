@@ -4,21 +4,17 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Highlight
 import androidx.compose.material.icons.filled.NoteAlt
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -30,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -38,9 +35,18 @@ import com.willykez.liturgx.core.LiturgicalColor
 import com.willykez.liturgx.data.bible.BibleBookInfo
 import com.willykez.liturgx.data.bible.BibleBrowseRepository
 import com.willykez.liturgx.data.bible.BibleUserDataStore
+import com.willykez.liturgx.ui.components.OneUiGroupCard
+import com.willykez.liturgx.ui.components.OneUiIconRow
+import com.willykez.liturgx.ui.components.OneUiRowDivider
 import com.willykez.liturgx.ui.theme.seasonAccent
 
 private enum class SavedTab(val label: String) { BOOKMARKS("Alama"), HIGHLIGHTS("Iliyoangaziwa"), NOTES("Dokezo") }
+
+/** Fixed per-type colors (rather than the liturgical accent) since these three types need to
+ *  read as distinct categories even though only one tab's worth is on screen at a time. */
+private val BOOKMARK_COLOR = Color(0xFF4285F4)
+private val HIGHLIGHT_COLOR = Color(0xFFF9A825)
+private val NOTE_COLOR = Color(0xFF00897B)
 
 private data class SavedEntry(
     val key: String,
@@ -58,6 +64,10 @@ private data class SavedEntry(
  * ("bookId:chapter:verse"), so every entry is resolved back into a book name and verse text
  * here via [repository] before it's shown -- if a verse address is somehow stale (e.g. the
  * bundled Bible data changed), it's silently skipped rather than shown broken.
+ *
+ * One UI-style grouped list: entries sit inside a single [OneUiGroupCard], each with a colored
+ * icon circle (fixed per type -- blue for bookmarks, gold for highlights, teal for notes) rather
+ * than the earlier flat hairline list.
  */
 @Composable
 fun SavedScreen(
@@ -120,7 +130,6 @@ fun SavedScreen(
                 )
             }
         }
-        HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
 
         if (entries.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -136,68 +145,75 @@ fun SavedScreen(
                 )
             }
         } else {
-            LazyColumn(Modifier.fillMaxSize()) {
-                items(entries, key = { it.key }) { entry ->
-                    Column(
-                        Modifier
-                            .fillMaxWidth()
-                            .clickable { onSelectVerse(entry.bookId, entry.chapterNum, entry.verseNum) }
-                            .padding(horizontal = 20.dp, vertical = 12.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                when (tab) {
-                                    SavedTab.BOOKMARKS -> Icons.Filled.Bookmark
-                                    SavedTab.HIGHLIGHTS -> Icons.Filled.Highlight
-                                    SavedTab.NOTES -> Icons.Filled.NoteAlt
-                                },
-                                contentDescription = null,
-                                tint = accent,
-                                modifier = Modifier.height(14.dp)
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                "${entry.bookName} ${entry.chapterNum}:${entry.verseNum}",
-                                style = MaterialTheme.typography.titleSmall,
-                                color = onBg,
-                                modifier = Modifier.weight(1f)
-                            )
-                            IconButton(
-                                onClick = {
+            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 16.dp)) {
+                item {
+                    OneUiGroupCard {
+                        entries.forEachIndexed { index, entry ->
+                            SavedEntryRow(
+                                tab = tab,
+                                entry = entry,
+                                onClick = { onSelectVerse(entry.bookId, entry.chapterNum, entry.verseNum) },
+                                onRemove = {
                                     when (tab) {
                                         SavedTab.BOOKMARKS -> userData.setBookmarked(entry.key, false)
                                         SavedTab.HIGHLIGHTS -> userData.setHighlighted(entry.key, false)
                                         SavedTab.NOTES -> userData.removeNote(entry.key)
                                     }
                                     version++
-                                },
-                                modifier = Modifier.height(28.dp)
-                            ) {
-                                Icon(Icons.Filled.Close, contentDescription = "Ondoa", tint = onBgDim, modifier = Modifier.height(16.dp))
-                            }
-                        }
-                        Text(
-                            entry.text,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = onBgDim,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(top = 2.dp)
-                        )
-                        if (entry.note != null) {
-                            Text(
-                                entry.note,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = accent,
-                                fontWeight = FontWeight.Medium,
-                                maxLines = 3,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.padding(top = 4.dp)
+                                }
                             )
+                            if (index != entries.lastIndex) OneUiRowDivider()
                         }
                     }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SavedEntryRow(tab: SavedTab, entry: SavedEntry, onClick: () -> Unit, onRemove: () -> Unit) {
+    val accent = when (tab) {
+        SavedTab.BOOKMARKS -> BOOKMARK_COLOR
+        SavedTab.HIGHLIGHTS -> HIGHLIGHT_COLOR
+        SavedTab.NOTES -> NOTE_COLOR
+    }
+    val icon = when (tab) {
+        SavedTab.BOOKMARKS -> Icons.Filled.Bookmark
+        SavedTab.HIGHLIGHTS -> Icons.Filled.Highlight
+        SavedTab.NOTES -> Icons.Filled.NoteAlt
+    }
+    val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
+
+    Column {
+        OneUiIconRow(
+            icon = icon,
+            iconBackground = accent,
+            title = "${entry.bookName} ${entry.chapterNum}:${entry.verseNum}",
+            onClick = onClick,
+        ) {
+            IconButton(onClick = onRemove) {
+                Icon(Icons.Filled.Close, contentDescription = "Ondoa", tint = onBgDim)
+            }
+        }
+        Column(Modifier.padding(start = 66.dp, end = 16.dp, bottom = 14.dp)) {
+            Text(
+                entry.text,
+                style = MaterialTheme.typography.bodyMedium,
+                color = onBgDim,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (entry.note != null) {
+                Text(
+                    entry.note,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = accent,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
             }
         }
     }

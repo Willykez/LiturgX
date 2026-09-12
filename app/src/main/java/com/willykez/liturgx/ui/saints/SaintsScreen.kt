@@ -1,27 +1,37 @@
 package com.willykez.liturgx.ui.saints
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.willykez.liturgx.core.LiturgicalColor
 import com.willykez.liturgx.core.Saint
-import com.willykez.liturgx.ui.components.LiturgicalSeal
-import com.willykez.liturgx.ui.theme.seasonAccentSoft
+import com.willykez.liturgx.ui.components.OneUiGroupCard
+import com.willykez.liturgx.ui.components.OneUiIconRow
+import com.willykez.liturgx.ui.components.OneUiRowDivider
 
 /**
  * [pendingSaintId] arrives from tapping today's saint chip on Home (see
@@ -29,6 +39,10 @@ import com.willykez.liturgx.ui.theme.seasonAccentSoft
  * any active search filter (so the target saint is guaranteed visible), auto-expands that
  * saint's bio, and scrolls to it, then calls [onSaintHandled] so re-entering this tab later
  * doesn't jump again unprompted.
+ *
+ * One UI-style grouped list (see [com.willykez.liturgx.ui.components.OneUiGroupCard]): each
+ * saint's own liturgical color still shows through, just as the row's icon-circle color rather
+ * than the whole row's background -- the same treatment Home gives its "Sikukuu Zinazokuja" list.
  */
 @Composable
 fun SaintsScreen(
@@ -77,15 +91,20 @@ fun SaintsScreen(
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(Modifier.height(14.dp))
-        LazyColumn(state = listState, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(filtered, key = { it.id }) { saint ->
-                SaintRow(
-                    saint = saint,
-                    expanded = saint.id in expandedIds,
-                    onExpandedChange = { open ->
-                        expandedIds = if (open) expandedIds + saint.id else expandedIds - saint.id
+        LazyColumn(state = listState) {
+            item {
+                OneUiGroupCard {
+                    filtered.forEachIndexed { index, saint ->
+                        SaintRow(
+                            saint = saint,
+                            expanded = saint.id in expandedIds,
+                            onExpandedChange = { open ->
+                                expandedIds = if (open) expandedIds + saint.id else expandedIds - saint.id
+                            }
+                        )
+                        if (index != filtered.lastIndex) OneUiRowDivider()
                     }
-                )
+                }
             }
         }
     }
@@ -98,21 +117,14 @@ private fun SaintRow(saint: Saint, expanded: Boolean, onExpandedChange: (Boolean
     val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
     val hasBio = !saint.wasifu.isNullOrBlank()
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(seasonAccentSoft(color))
-            .clickable(enabled = hasBio) { onExpandedChange(!expanded) }
-            .padding(14.dp)
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            LiturgicalSeal(color, size = 34.dp)
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(saint.jina, style = MaterialTheme.typography.titleMedium, color = onBg)
-                Text("${saint.tarehe} · ${saint.daraja}", style = MaterialTheme.typography.labelMedium, color = onBgDim)
-            }
+    Column {
+        OneUiIconRow(
+            icon = Icons.Filled.Star,
+            iconBackground = Color(color.hex),
+            title = saint.jina,
+            subtitle = "${saint.tarehe} \u00b7 ${saint.daraja}",
+            onClick = if (hasBio) ({ onExpandedChange(!expanded) }) else null,
+        ) {
             if (hasBio) {
                 Icon(
                     if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
@@ -122,14 +134,12 @@ private fun SaintRow(saint: Saint, expanded: Boolean, onExpandedChange: (Boolean
             }
         }
         AnimatedVisibility(visible = expanded && hasBio) {
-            Column {
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    saint.wasifu.orEmpty(),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = onBg
-                )
-            }
+            Text(
+                saint.wasifu.orEmpty(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = onBg,
+                modifier = Modifier.padding(start = 66.dp, end = 16.dp, bottom = 14.dp)
+            )
         }
     }
 }
