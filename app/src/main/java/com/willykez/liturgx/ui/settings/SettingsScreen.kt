@@ -68,12 +68,12 @@ import com.willykez.liturgx.data.bible.ReadingPrefsStore
 import com.willykez.liturgx.data.bible.ScriptureFontStyle
 import com.willykez.liturgx.data.sharing.PdfShareUtils
 import com.willykez.liturgx.data.sharing.YearlyLectionaryPdfGenerator
-import com.willykez.liturgx.ui.components.SettingsGroupCard
-import com.willykez.liturgx.ui.components.SettingsIconRow
-import com.willykez.liturgx.ui.components.SettingsRowDivider
-import com.willykez.liturgx.ui.components.SettingsSectionLabel
-import com.willykez.liturgx.ui.components.SettingsSegmentedRow
-import com.willykez.liturgx.ui.components.SettingsSwitchRow
+import com.willykez.liturgx.ui.components.OneUiGroupCard
+import com.willykez.liturgx.ui.components.OneUiIconRow
+import com.willykez.liturgx.ui.components.OneUiRowDivider
+import com.willykez.liturgx.ui.components.OneUiSectionLabel
+import com.willykez.liturgx.ui.components.OneUiSegmentedRow
+import com.willykez.liturgx.ui.components.OneUiSwitchRow
 import com.willykez.liturgx.ui.theme.TextScale
 import com.willykez.liturgx.ui.theme.ThemeMode
 import kotlinx.coroutines.Dispatchers
@@ -179,9 +179,9 @@ fun SettingsSheetContent(
 
             // --- USOMAJI (Bible reading preferences) --------------------------------
             Column {
-                SettingsSectionLabel("USOMAJI")
-                SettingsGroupCard {
-                    SettingsSwitchRow(
+                OneUiSectionLabel("USOMAJI")
+                OneUiGroupCard {
+                    OneUiSwitchRow(
                         icon = Icons.Filled.FormatListNumbered,
                         iconBackground = BLUE,
                         title = "Namba za mstari",
@@ -193,10 +193,10 @@ fun SettingsSheetContent(
                             readingPrefs.saveVerseNumbersVisible(it)
                         },
                     )
-                    SettingsRowDivider()
-                    SettingsIconRow(icon = Icons.Filled.TextFields, iconBackground = PURPLE, title = "Aina ya maandishi")
+                    OneUiRowDivider()
+                    OneUiIconRow(icon = Icons.Filled.TextFields, iconBackground = PURPLE, title = "Aina ya maandishi")
                     Column(Modifier.padding(start = 66.dp, end = 16.dp, bottom = 14.dp)) {
-                        SettingsSegmentedRow(
+                        OneUiSegmentedRow(
                             options = listOf(
                                 ScriptureFontStyle.SERIF to "Klasiki",
                                 ScriptureFontStyle.SANS to "Rahisi",
@@ -210,8 +210,8 @@ fun SettingsSheetContent(
                             },
                         )
                     }
-                    SettingsRowDivider()
-                    SettingsSwitchRow(
+                    OneUiRowDivider()
+                    OneUiSwitchRow(
                         icon = Icons.Filled.Notes,
                         iconBackground = TEAL,
                         title = "Hali ya kusoma: Aya",
@@ -228,9 +228,9 @@ fun SettingsSheetContent(
 
             // --- UKUMBUSHO ---------------------------------------------------------
             Column {
-                SettingsSectionLabel("UKUMBUSHO")
-                SettingsGroupCard {
-                    SettingsIconRow(
+                OneUiSectionLabel("UKUMBUSHO")
+                OneUiGroupCard {
+                    OneUiIconRow(
                         icon = Icons.Filled.NotificationsActive,
                         iconBackground = ORANGE,
                         title = "Kikumbusho cha Kila Siku",
@@ -239,8 +239,8 @@ fun SettingsSheetContent(
                         ReminderSwitch(checked = reminderEnabled, onCheckedChange = onReminderEnabledChange, accent = accent)
                     }
                     if (reminderEnabled) {
-                        SettingsRowDivider()
-                        SettingsIconRow(
+                        OneUiRowDivider()
+                        OneUiIconRow(
                             icon = Icons.Filled.NotificationsActive,
                             iconBackground = ORANGE,
                             title = "Wakati",
@@ -248,8 +248,8 @@ fun SettingsSheetContent(
                             onClick = { showTimePicker(reminderHour, reminderMinute, onReminderTimeChange) },
                         )
                     }
-                    SettingsRowDivider()
-                    SettingsIconRow(
+                    OneUiRowDivider()
+                    OneUiIconRow(
                         icon = Icons.Filled.FormatQuote,
                         iconBackground = RED,
                         title = "Neno la Kila Siku",
@@ -258,8 +258,8 @@ fun SettingsSheetContent(
                         ReminderSwitch(checked = verseReminderEnabled, onCheckedChange = onVerseReminderEnabledChange, accent = accent)
                     }
                     if (verseReminderEnabled) {
-                        SettingsRowDivider()
-                        SettingsIconRow(
+                        OneUiRowDivider()
+                        OneUiIconRow(
                             icon = Icons.Filled.FormatQuote,
                             iconBackground = RED,
                             title = "Wakati",
@@ -272,19 +272,19 @@ fun SettingsSheetContent(
 
             // --- MWONEKANO -----------------------------------------------------------
             Column {
-                SettingsSectionLabel("MWONEKANO")
-                SettingsGroupCard {
-                    SettingsIconRow(icon = Icons.Filled.Palette, iconBackground = INDIGO, title = "Mwonekano")
+                OneUiSectionLabel("MWONEKANO")
+                OneUiGroupCard {
+                    OneUiIconRow(icon = Icons.Filled.Palette, iconBackground = INDIGO, title = "Mwonekano")
                     Column(Modifier.padding(start = 66.dp, end = 16.dp, bottom = 14.dp)) {
-                        SettingsSegmentedRow(
+                        OneUiSegmentedRow(
                             options = ThemeMode.entries.map { it to it.label },
                             selected = themeMode,
                             accent = accent,
                             onSelect = onThemeModeChange,
                         )
                     }
-                    SettingsRowDivider()
-                    SettingsIconRow(icon = Icons.Filled.TextIncrease, iconBackground = PINK, title = "Ukubwa wa Maandishi")
+                    OneUiRowDivider()
+                    OneUiIconRow(icon = Icons.Filled.TextIncrease, iconBackground = PINK, title = "Ukubwa wa Maandishi")
                     Column(Modifier.padding(start = 66.dp, end = 16.dp, bottom = 10.dp)) {
                         TextScaleSlider(textScale = textScale, onTextScaleChange = onTextScaleChange, accent = accent)
                     }
@@ -293,9 +293,9 @@ fun SettingsSheetContent(
 
             // --- JIMBO (region-specific liturgical rules) --------------------------
             Column {
-                SettingsSectionLabel("JIMBO LAKO")
-                SettingsGroupCard {
-                    SettingsSwitchRow(
+                OneUiSectionLabel("JIMBO LAKO")
+                OneUiGroupCard {
+                    OneUiSwitchRow(
                         icon = Icons.Filled.Star,
                         iconBackground = GREEN,
                         title = "Epifania Ihamishiwe Dominika",
@@ -306,8 +306,8 @@ fun SettingsSheetContent(
                             onRegionChange(region.copy(epiphanyMode = if (checked) EpiphanyMode.TRANSFERRED else EpiphanyMode.FIXED_JAN6))
                         },
                     )
-                    SettingsRowDivider()
-                    SettingsSwitchRow(
+                    OneUiRowDivider()
+                    OneUiSwitchRow(
                         icon = Icons.Filled.Upload,
                         iconBackground = GREEN,
                         title = "Shika Alhamisi",
@@ -321,9 +321,9 @@ fun SettingsSheetContent(
 
             // --- KALENDA YA MWAKA ---------------------------------------------------
             Column {
-                SettingsSectionLabel("KALENDA YA MWAKA")
-                SettingsGroupCard {
-                    SettingsIconRow(
+                OneUiSectionLabel("KALENDA YA MWAKA")
+                OneUiGroupCard {
+                    OneUiIconRow(
                         icon = Icons.Filled.CalendarMonth,
                         iconBackground = BROWN,
                         title = "Pakua Kalenda ya Mwaka",
@@ -337,8 +337,8 @@ fun SettingsSheetContent(
 
             // --- DATA YAKO (bookmarks / highlights / notes from the Bible tab) ------
             Column {
-                SettingsSectionLabel("DATA YAKO")
-                SettingsGroupCard {
+                OneUiSectionLabel("DATA YAKO")
+                OneUiGroupCard {
                     dataVersion.let {
                         ClearableDataRow(
                             icon = Icons.Filled.Bookmark,
@@ -348,7 +348,7 @@ fun SettingsSheetContent(
                             onToggleExpanded = { clearBookmarksExpanded = !clearBookmarksExpanded },
                             onConfirmClear = { bibleUserData.clearBookmarks(); clearBookmarksExpanded = false; dataVersion++ },
                         )
-                        SettingsRowDivider()
+                        OneUiRowDivider()
                         ClearableDataRow(
                             icon = Icons.Filled.Highlight,
                             title = "Iliyoangaziwa",
@@ -357,7 +357,7 @@ fun SettingsSheetContent(
                             onToggleExpanded = { clearHighlightsExpanded = !clearHighlightsExpanded },
                             onConfirmClear = { bibleUserData.clearHighlights(); clearHighlightsExpanded = false; dataVersion++ },
                         )
-                        SettingsRowDivider()
+                        OneUiRowDivider()
                         ClearableDataRow(
                             icon = Icons.Filled.NoteAlt,
                             title = "Dokezo",
@@ -372,9 +372,9 @@ fun SettingsSheetContent(
 
             // --- KUHUSU --------------------------------------------------------------
             Column {
-                SettingsSectionLabel("KUHUSU")
-                SettingsGroupCard {
-                    SettingsIconRow(
+                OneUiSectionLabel("KUHUSU")
+                OneUiGroupCard {
+                    OneUiIconRow(
                         icon = Icons.Filled.Info,
                         iconBackground = GRAY,
                         title = "LiturgX",
@@ -443,7 +443,7 @@ private fun YearlyPdfExportButton(region: RegionSettings, accent: Color) {
     val year = remember { LocalDate.now().year }
     val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
 
-    SettingsSegmentedRow(
+    OneUiSegmentedRow(
         options = listOf(
             YearlyLectionaryPdfGenerator.PdfContentMode.REFERENCES_ONLY to "Marejeo Pekee",
             YearlyLectionaryPdfGenerator.PdfContentMode.FULL_TEXT to "Masomo Kamili",
@@ -520,7 +520,7 @@ private fun ClearableDataRow(
     onConfirmClear: () -> Unit,
 ) {
     Column {
-        SettingsIconRow(
+        OneUiIconRow(
             icon = icon,
             iconBackground = RED,
             title = "Futa $title",

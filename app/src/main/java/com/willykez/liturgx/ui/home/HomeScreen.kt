@@ -1,27 +1,16 @@
 package com.willykez.liturgx.ui.home
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.willykez.liturgx.core.LiturgicalColor
@@ -33,7 +22,10 @@ import com.willykez.liturgx.data.LectionaryRepository
 import com.willykez.liturgx.data.ProgressStore
 import com.willykez.liturgx.data.bible.BibleRepository
 import com.willykez.liturgx.ui.components.DailyReadingsView
-import com.willykez.liturgx.ui.components.LiturgicalSeal
+import com.willykez.liturgx.ui.components.OneUiGroupCard
+import com.willykez.liturgx.ui.components.OneUiIconRow
+import com.willykez.liturgx.ui.components.OneUiRowDivider
+import com.willykez.liturgx.ui.components.OneUiSectionLabel
 import com.willykez.liturgx.ui.components.VerseOfTheDayCard
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -45,6 +37,9 @@ private data class UpcomingSaint(val date: LocalDate, val saintId: Int, val name
 
 private const val UPCOMING_HORIZON_DAYS = 45
 private const val UPCOMING_MAX_ITEMS = 5
+
+/** Matches the warm gold used for saints/feasts elsewhere in the One UI-style list language. */
+private val GOLD = Color(0xFFF9A825)
 
 /** Same fixed-solemnity/major-feast detection [com.willykez.liturgx.data.sharing.YearlyLectionaryPdfGenerator]
  *  uses for its "special day" filter -- duplicated locally (small, and the two call sites have
@@ -150,20 +145,34 @@ fun HomeScreen(
             }
         },
         extraFooterContent = {
-            Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+            // One UI-style grouped cards -- same shared list language as Settings -- rather than
+            // the earlier flat hairline list.
+            Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 if (upcomingHolidays.isNotEmpty()) {
-                    UpcomingSection(title = "Sikukuu Zinazokuja") {
-                        upcomingHolidays.forEachIndexed { index, holiday ->
-                            UpcomingHolidayRow(holiday)
-                            if (index != upcomingHolidays.lastIndex) UpcomingDivider()
+                    Column {
+                        OneUiSectionLabel("SIKUKUU ZINAZOKUJA")
+                        OneUiGroupCard {
+                            upcomingHolidays.forEachIndexed { index, holiday ->
+                                UpcomingHolidayRow(holiday)
+                                if (index != upcomingHolidays.lastIndex) OneUiRowDivider()
+                            }
                         }
                     }
                 }
                 if (upcomingSaints.isNotEmpty()) {
-                    UpcomingSection(title = "Watakatifu Wanaokuja") {
-                        upcomingSaints.forEachIndexed { index, saint ->
-                            UpcomingSaintRow(saint, onClick = { onOpenSaint(saint.saintId) })
-                            if (index != upcomingSaints.lastIndex) UpcomingDivider()
+                    Column {
+                        OneUiSectionLabel("WATAKATIFU WANAOKUJA")
+                        OneUiGroupCard {
+                            upcomingSaints.forEachIndexed { index, saint ->
+                                OneUiIconRow(
+                                    icon = Icons.Filled.Star,
+                                    iconBackground = GOLD,
+                                    title = saint.name,
+                                    subtitle = "${saint.rank} \u00b7 ${shortDateLabel(saint.date)}",
+                                    onClick = { onOpenSaint(saint.saintId) },
+                                )
+                                if (index != upcomingSaints.lastIndex) OneUiRowDivider()
+                            }
                         }
                     }
                 }
@@ -175,64 +184,21 @@ fun HomeScreen(
     )
 }
 
-@Composable
-private fun UpcomingSection(title: String, content: @Composable () -> Unit) {
-    val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
-    Column {
-        Text(
-            title.uppercase(),
-            style = MaterialTheme.typography.labelMedium,
-            color = onBgDim,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-        content()
-    }
-}
-
-@Composable
-private fun UpcomingDivider() {
-    HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
-}
-
 /** "Jumapili, 14 Sep" -- a short weekday+day+month form, distinct from [DailyReadingsView]'s
  *  full "Jumapili, 14 Septemba 2026" header line, since this repeats several times in a list. */
 private fun shortDateLabel(date: LocalDate): String =
     "${SwahiliDate.weekdayName(date.dayOfWeek)}, ${date.dayOfMonth} ${SwahiliDate.monthName(date.monthValue).take(3)}"
 
+/** Uses the day's actual liturgical-color as the icon-circle background (rather than one of the
+ *  fixed palette colors the rest of the app's rows use) -- the color itself is the information
+ *  here, so it stays tied to what the day's seal would show elsewhere, even inside the
+ *  otherwise-uniform One UI row shape. */
 @Composable
 private fun UpcomingHolidayRow(holiday: UpcomingHoliday) {
-    val onBg = MaterialTheme.colorScheme.onBackground
-    val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
-    Row(
-        Modifier.fillMaxWidth().padding(vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        LiturgicalSeal(holiday.color, size = 28.dp)
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(holiday.title, style = MaterialTheme.typography.titleSmall, color = onBg)
-            Text(shortDateLabel(holiday.date), style = MaterialTheme.typography.labelMedium, color = onBgDim)
-        }
-    }
-}
-
-@Composable
-private fun UpcomingSaintRow(saint: UpcomingSaint, onClick: () -> Unit) {
-    val onBg = MaterialTheme.colorScheme.onBackground
-    val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
-    Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(Icons.Filled.Star, contentDescription = null, tint = onBgDim, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(saint.name, style = MaterialTheme.typography.titleSmall, color = onBg)
-            Text(
-                "${saint.rank} · ${shortDateLabel(saint.date)}",
-                style = MaterialTheme.typography.labelMedium,
-                color = onBgDim
-            )
-        }
-    }
+    OneUiIconRow(
+        icon = Icons.Filled.Star,
+        iconBackground = Color(holiday.color.hex),
+        title = holiday.title,
+        subtitle = shortDateLabel(holiday.date),
+    )
 }

@@ -2,10 +2,8 @@ package com.willykez.liturgx.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -33,17 +31,17 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 
 /**
- * Samsung One UI / Google Settings-style grouped list -- replaces the earlier flat, hairline-
- * divided list (itself ported from BibliaApp) with rounded card groups, colored icon circles per
- * row, and MD3 segmented buttons for multi-choice pickers, per direct reference screenshots.
- * One [SettingsGroupCard] per section (not one hairline per row across the whole screen); rows
- * within a card are separated by [SettingsRowDivider], inset to align with the text rather than
- * running edge-to-edge under the icon.
+ * Samsung One UI / Google Settings-style grouped list -- rounded card groups, colored icon
+ * circles per row, MD3 segmented buttons for multi-choice pickers, per direct reference
+ * screenshots. Originally built for Settings, now the shared list language for the whole app
+ * (Home's upcoming-events sections, and onward) rather than a settings-only pattern, hence the
+ * generic name -- one [OneUiGroupCard] per section, rows separated by [OneUiRowDivider] inset
+ * to align with the text rather than running edge-to-edge under the icon.
  */
 
-/** Small uppercase label above a group card -- e.g. "USOMAJI", "UKUMBUSHO". */
+/** Small uppercase label above a group card -- e.g. "USOMAJI", "SIKUKUU ZINAZOKUJA". */
 @Composable
-fun SettingsSectionLabel(text: String, modifier: Modifier = Modifier) {
+fun OneUiSectionLabel(text: String, modifier: Modifier = Modifier) {
     Text(
         text,
         style = MaterialTheme.typography.labelMedium,
@@ -54,7 +52,7 @@ fun SettingsSectionLabel(text: String, modifier: Modifier = Modifier) {
 
 /** The rounded card container for one section's rows. */
 @Composable
-fun SettingsGroupCard(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+fun OneUiGroupCard(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     Column(
         modifier
             .fillMaxWidth()
@@ -68,7 +66,7 @@ fun SettingsGroupCard(modifier: Modifier = Modifier, content: @Composable () -> 
 /** A hairline between two rows in the same card, inset to align with the row's text (not the
  *  icon), so it doesn't visually cut through the icon column. */
 @Composable
-fun SettingsRowDivider() {
+fun OneUiRowDivider() {
     HorizontalDivider(
         modifier = Modifier.padding(start = 64.dp),
         color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
@@ -79,7 +77,7 @@ fun SettingsRowDivider() {
 /** One row: a colored icon circle, title/subtitle, and optional trailing content (switch,
  *  value text, chevron) -- the One UI "colored icon circle" list-item pattern. */
 @Composable
-fun SettingsIconRow(
+fun OneUiIconRow(
     icon: ImageVector,
     iconBackground: Color,
     title: String,
@@ -114,9 +112,9 @@ fun SettingsIconRow(
     }
 }
 
-/** A row whose only content is a switch on the trailing edge -- the most common row shape. */
+/** A row whose only content is a switch on the trailing edge -- the most common settings-row shape. */
 @Composable
-fun SettingsSwitchRow(
+fun OneUiSwitchRow(
     icon: ImageVector,
     iconBackground: Color,
     title: String,
@@ -125,7 +123,7 @@ fun SettingsSwitchRow(
     accent: Color,
     onCheckedChange: (Boolean) -> Unit,
 ) {
-    SettingsIconRow(icon = icon, iconBackground = iconBackground, title = title, subtitle = subtitle) {
+    OneUiIconRow(icon = icon, iconBackground = iconBackground, title = title, subtitle = subtitle) {
         Switch(checked = checked, onCheckedChange = onCheckedChange, colors = SwitchDefaults.colors(checkedTrackColor = accent))
     }
 }
@@ -135,7 +133,7 @@ fun SettingsSwitchRow(
  *  of the plain tap-a-text-label pickers used before. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun <T> SettingsSegmentedRow(
+fun <T> OneUiSegmentedRow(
     options: List<Pair<T, String>>,
     selected: T,
     accent: Color,
