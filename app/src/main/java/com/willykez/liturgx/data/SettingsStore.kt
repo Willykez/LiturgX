@@ -86,4 +86,15 @@ class SettingsStore(context: Context) {
             .remove("text_scale")
             .apply()
     }
+
+    /** Whether screen content shows the day's liturgical-colour wash ([SeasonBackdrop]) or the
+     *  plain app theme background. Defaults to true, matching the app's look before this was
+     *  configurable. Doesn't affect the Settings sheet or the top/bottom navigation bars --
+     *  those always use the plain theme background regardless, so the app's own chrome stays
+     *  legible and consistent even when a season's colour would otherwise clash. */
+    fun loadUseLiturgicalBackground(): Boolean = prefs.getBoolean("use_liturgical_background", true)
+
+    fun saveUseLiturgicalBackground(enabled: Boolean) {
+        prefs.edit().putBoolean("use_liturgical_background", enabled).apply()
+    }
 }

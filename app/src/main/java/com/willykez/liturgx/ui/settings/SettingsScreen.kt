@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.FormatListNumbered
 import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material.icons.filled.Highlight
@@ -118,6 +119,7 @@ fun SettingsSheetContent(
     verseReminderHour: Int,
     verseReminderMinute: Int,
     textScale: Float,
+    useLiturgicalBackground: Boolean,
     onRegionChange: (RegionSettings) -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
     onReminderEnabledChange: (Boolean) -> Unit,
@@ -125,6 +127,7 @@ fun SettingsSheetContent(
     onVerseReminderEnabledChange: (Boolean) -> Unit,
     onVerseReminderTimeChange: (Int, Int) -> Unit,
     onTextScaleChange: (Float) -> Unit,
+    onUseLiturgicalBackgroundChange: (Boolean) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -288,6 +291,16 @@ fun SettingsSheetContent(
                     Column(Modifier.padding(start = 66.dp, end = 16.dp, bottom = 10.dp)) {
                         TextScaleSlider(textScale = textScale, onTextScaleChange = onTextScaleChange, accent = accent)
                     }
+                    OneUiRowDivider()
+                    OneUiSwitchRow(
+                        icon = Icons.Filled.ColorLens,
+                        iconBackground = accent,
+                        title = "Rangi za Kiliturujia Nyuma",
+                        subtitle = "Onyesha rangi ya siku nyuma ya skrini; ukizima, mandhari ya programu tu",
+                        checked = useLiturgicalBackground,
+                        accent = accent,
+                        onCheckedChange = onUseLiturgicalBackgroundChange,
+                    )
                 }
             }
 

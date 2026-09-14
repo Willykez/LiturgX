@@ -41,7 +41,14 @@ class LectionaryRepository(context: Context) {
                 // cycle when the hit set actually varies by year; rows with no year tag (the
                 // overwhelming majority of sikukuu_maalum entries) are unaffected.
                 val sikukuu = if (allHits.any { it.mwakaLiturujia != null }) {
-                    allHits.filter { it.mwakaLiturujia == null || it.mwakaLiturujia == seasonal.cycleYear }
+                    val filtered = allHits.filter { it.mwakaLiturujia == null || it.mwakaLiturujia == seasonal.cycleYear }
+                    // A date far outside the calendar's intended range (the month pager spans
+                    // 1970-2100) can make the cycle-year math land on something this hit set
+                    // doesn't have a row for -- fall back to the unfiltered hits rather than
+                    // crash on `.first()` below with an empty list. Showing all three years'
+                    // readings for a handful of edge-case dates is a far smaller problem than
+                    // the app crashing while swiping.
+                    filtered.ifEmpty { allHits }
                 } else {
                     allHits
                 }

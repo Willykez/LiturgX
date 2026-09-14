@@ -45,8 +45,41 @@ private val WEEKDAY_LABELS = mapOf(
 )
 
 /**
- * One month page of the calendar. Always renders exactly [WEEK_ROWS] week-rows regardless of
- * how many the month actually needs (4-6) so swiping between months never jumps in height.
+ * The weekday letter row (Mon/Tue/.../Sun), rendered once above the month pager rather than once
+ * per page -- so swiping only moves the day-number grid underneath it, matching the platform
+ * Calendar app's month view (the header stays put; only the numbers move). Still highlights
+ * today's column, but now driven by whichever month is currently centered in the pager
+ * ([visibleMonth]) rather than baked into a specific page's own composition.
+ */
+@Composable
+fun WeekdayHeaderRow(
+    visibleMonth: YearMonth,
+    today: LocalDate,
+    todayAccent: Color,
+    onBgDim: Color,
+    modifier: Modifier = Modifier
+) {
+    val todayIsInThisMonth = YearMonth.from(today) == visibleMonth
+    Row(modifier.fillMaxWidth()) {
+        WEEKDAYS.forEach { dow ->
+            val isTodayColumn = todayIsInThisMonth && dow == today.dayOfWeek
+            Text(
+                WEEKDAY_LABELS.getValue(dow),
+                modifier = Modifier.weight(1f),
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = if (isTodayColumn) FontWeight.Bold else FontWeight.Normal,
+                color = if (isTodayColumn) todayAccent else onBgDim
+            )
+        }
+    }
+}
+
+/**
+ * One month page of the calendar -- just the day-number grid now; the weekday letter row lives
+ * in [WeekdayHeaderRow], rendered once above the pager instead of once per page (see there for
+ * why). Always renders exactly [WEEK_ROWS] week-rows regardless of how many the month actually
+ * needs (4-6) so swiping between months never jumps in height.
  *
  * Every day gets a small dot in *that day's own* resolved liturgical color -- not just days
  * with a named saint, unlike the previous version -- giving an at-a-glance view of how a
@@ -57,7 +90,7 @@ private val WEEKDAY_LABELS = mapOf(
  * Today gets a thin ring in its own color; the selected day (if different from today) gets a
  * solid fill in the current app accent, independent of that day's own color -- selection is a
  * UI state, not a liturgical fact, so it deliberately doesn't borrow the day's own color the way
- * the dot does. Today's weekday column header is highlighted in today's color too.
+ * the dot does.
  */
 @Composable
 fun MonthGrid(
@@ -71,7 +104,6 @@ fun MonthGrid(
     modifier: Modifier = Modifier
 ) {
     val onBg = MaterialTheme.colorScheme.onBackground
-    val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
 
     val dayColors by produceState(initialValue = emptyMap<Int, LiturgicalColor>(), month, region) {
         value = withContext(Dispatchers.IO) {
@@ -85,24 +117,8 @@ fun MonthGrid(
     // Monday-first column index: Monday -> 0, ... Sunday -> 6.
     val firstDayColumn = firstOfMonth.dayOfWeek.value - 1
     val daysInMonth = month.lengthOfMonth()
-    val todayIsInThisMonth = YearMonth.from(today) == month
 
     Column(modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth()) {
-            WEEKDAYS.forEach { dow ->
-                val isTodayColumn = todayIsInThisMonth && dow == today.dayOfWeek
-                Text(
-                    WEEKDAY_LABELS.getValue(dow),
-                    modifier = Modifier.weight(1f),
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = if (isTodayColumn) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isTodayColumn) seasonAccent(dayColors[today.dayOfMonth] ?: LiturgicalColor.KIJANI) else onBgDim
-                )
-            }
-        }
-        Spacer(Modifier.height(10.dp))
-
         for (week in 0 until WEEK_ROWS) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 for (column in 0 until 7) {

@@ -1,6 +1,7 @@
 package com.willykez.liturgx.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -158,8 +159,18 @@ fun LiturgXApp() {
         // Scaffold's padding, unlike its content) -- previously each screen painted its own
         // backdrop *inside* Scaffold's padded content area, leaving a visible seam where the
         // status bar showed Scaffold's plain containerColor instead of the season wash.
+        // Whether this shows the liturgical-colour wash or a plain solid background is a
+        // Settings toggle (vm.useLiturgicalBackground) -- either way something opaque always
+        // fills this layer, since the Scaffold and its screen content above are transparent and
+        // rely on it. The top and bottom bars paint their own solid background regardless of
+        // this toggle (see their containerColor below), so the app's chrome stays plain even
+        // when a season's colour would otherwise clash with it.
         Box(Modifier.fillMaxSize()) {
-            SeasonBackdrop(accentColor, modifier = Modifier.fillMaxSize())
+            if (vm.useLiturgicalBackground) {
+                SeasonBackdrop(accentColor, modifier = Modifier.fillMaxSize())
+            } else {
+                Box(Modifier.fillMaxSize().background(background))
+            }
 
             Scaffold(
                 containerColor = Color.Transparent,
@@ -173,7 +184,7 @@ fun LiturgXApp() {
                             }
                         },
                         colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = Color.Transparent,
+                            containerColor = background,
                             titleContentColor = MaterialTheme.colorScheme.onBackground,
                             actionIconContentColor = seasonAccent(accentColor)
                         ),
@@ -314,6 +325,7 @@ fun LiturgXApp() {
                         verseReminderHour = vm.verseReminderHour,
                         verseReminderMinute = vm.verseReminderMinute,
                         textScale = vm.textScale,
+                        useLiturgicalBackground = vm.useLiturgicalBackground,
                         onRegionChange = { vm.updateRegion(it) },
                         onThemeModeChange = { vm.updateThemeMode(it) },
                         onReminderEnabledChange = { vm.updateReminderEnabled(it) },
@@ -321,6 +333,7 @@ fun LiturgXApp() {
                         onVerseReminderEnabledChange = { vm.updateVerseReminderEnabled(it) },
                         onVerseReminderTimeChange = { h, m -> vm.updateVerseReminderTime(h, m) },
                         onTextScaleChange = { vm.updateTextScale(it) },
+                        onUseLiturgicalBackgroundChange = { vm.updateUseLiturgicalBackground(it) },
                         onClose = {
                             sheetScope.launch {
                                 sheetState.hide()

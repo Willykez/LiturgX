@@ -50,6 +50,9 @@ class LectionaryViewModel(app: Application) : AndroidViewModel(app) {
     var textScale by mutableStateOf(settingsStore.loadTextScale())
         private set
 
+    var useLiturgicalBackground by mutableStateOf(settingsStore.loadUseLiturgicalBackground())
+        private set
+
     var today by mutableStateOf(LocalDate.now())
         private set
 
@@ -83,6 +86,11 @@ class LectionaryViewModel(app: Application) : AndroidViewModel(app) {
     fun updateTextScale(scale: Float) {
         textScale = com.willykez.liturgx.ui.theme.TextScale.coerce(scale)
         settingsStore.saveTextScale(scale)
+    }
+
+    fun updateUseLiturgicalBackground(enabled: Boolean) {
+        useLiturgicalBackground = enabled
+        settingsStore.saveUseLiturgicalBackground(enabled)
     }
 
     /** The permission dance (Android 13+ POST_NOTIFICATIONS) happens in SettingsScreen, which

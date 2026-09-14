@@ -38,7 +38,9 @@ import com.willykez.liturgx.data.DayResult
 import com.willykez.liturgx.data.LectionaryRepository
 import com.willykez.liturgx.ui.components.DailyReadingsView
 import com.willykez.liturgx.ui.theme.seasonAccent
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
@@ -89,6 +91,15 @@ fun CalendarScreen(
         pageCount = { PAGE_COUNT }
     )
 
+    // Today's own color for the weekday-header highlight -- a small standalone lookup since the
+    // header is now static (see WeekdayHeaderRow) and needs today's color regardless of which
+    // month page happens to be centered, unlike the per-page dayColors map MonthGrid keeps for
+    // its own dots.
+    var todayColor by remember { mutableStateOf(seasonAccent(selectedResult.resolved.color)) }
+    LaunchedEffect(today, region) {
+        todayColor = withContext(Dispatchers.IO) { seasonAccent(repository.getForDate(today, region).resolved.color) }
+    }
+
     // Keep the pager following the selected date when it changes from outside a swipe --
     // the "Leo" button, the chevrons, or the date-picker shortcut below.
     LaunchedEffect(selectedDate) {
@@ -130,6 +141,15 @@ fun CalendarScreen(
                     }
                 }
             }
+
+            WeekdayHeaderRow(
+                visibleMonth = visibleMonth,
+                today = today,
+                todayAccent = todayColor,
+                onBgDim = onBgDim,
+                modifier = Modifier.padding(horizontal = 20.dp)
+            )
+            Spacer(Modifier.height(10.dp))
 
             HorizontalPager(
                 state = pagerState,
