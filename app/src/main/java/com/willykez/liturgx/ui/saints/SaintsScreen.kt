@@ -92,8 +92,16 @@ fun SaintsScreen(
     }
 
     val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
+    val onBg = MaterialTheme.colorScheme.onBackground
 
     Column(modifier.fillMaxSize().padding(20.dp)) {
+        Text("Kalenda ya Watakatifu", style = MaterialTheme.typography.headlineSmall, color = onBg)
+        Text(
+            "Orodha teule ya sikukuu na kumbukumbu",
+            style = MaterialTheme.typography.labelMedium,
+            color = onBgDim
+        )
+        Spacer(Modifier.height(14.dp))
         OutlinedTextField(
             value = query,
             onValueChange = { query = it },

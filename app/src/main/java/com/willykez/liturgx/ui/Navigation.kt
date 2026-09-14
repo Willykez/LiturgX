@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
@@ -98,15 +99,6 @@ private fun StreakBadge(today: java.time.LocalDate, accent: Color) {
         Icon(Icons.Filled.LocalFireDepartment, contentDescription = "Siku $streak mfululizo", tint = accent, modifier = Modifier.padding(end = 2.dp))
         Text(streak.toString(), style = MaterialTheme.typography.labelLarge, color = accent)
     }
-}
-
-private fun titleFor(route: String?): String = when (route) {
-    Dest.Leo.route -> "LiturgX"
-    Dest.Kalenda.route -> "Kalenda"
-    Dest.Biblia.route -> "Biblia"
-    Dest.Watakatifu.route -> "Watakatifu"
-    Dest.Hifadhi.route -> "Yaliyohifadhiwa"
-    else -> "LiturgX"
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -172,11 +164,22 @@ fun LiturgXApp() {
                 Box(Modifier.fillMaxSize().background(background))
             }
 
+            // No title text in the bar -- each screen already states what it is in its own
+            // content (see e.g. BookListScreen's "Biblia" heading), so a second, tab-name label
+            // up here next to the streak badge and settings gear was pure repetition. The bar
+            // itself still slides fully off-screen on scroll-down and back on scroll-up
+            // (Material's "enter always" behavior) -- with no title to anchor a size collapse
+            // the way a Large/Medium top app bar does, hiding the whole bar is the collapsing
+            // behavior that actually makes sense here, and it's a bigger win anyway: more of the
+            // screen for readings while scrolling, the bar back the instant you scroll up for it.
+            val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+
             Scaffold(
                 containerColor = Color.Transparent,
+                modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
                 topBar = {
                     TopAppBar(
-                        title = { Text(titleFor(currentRoute), style = MaterialTheme.typography.titleLarge) },
+                        title = {},
                         actions = {
                             StreakBadge(today = vm.today, accent = seasonAccent(accentColor))
                             IconButton(onClick = { showSettingsSheet = true }) {
@@ -188,6 +191,7 @@ fun LiturgXApp() {
                             titleContentColor = MaterialTheme.colorScheme.onBackground,
                             actionIconContentColor = seasonAccent(accentColor)
                         ),
+                        scrollBehavior = scrollBehavior,
                         windowInsets = TopAppBarDefaults.windowInsets
                     )
                 },

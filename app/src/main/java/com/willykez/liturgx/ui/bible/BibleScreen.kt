@@ -177,6 +177,7 @@ private fun BookListScreen(
     onSelectBook: (BibleBookInfo) -> Unit,
     onSearch: () -> Unit
 ) {
+    val onBg = MaterialTheme.colorScheme.onBackground
     val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
     val accent = seasonAccent(color)
     val oldTestament = books.filter { it.testament == Testament.AGANO_LA_KALE }
@@ -193,7 +194,10 @@ private fun BookListScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Vitabu 66 kwa Kiswahili", style = MaterialTheme.typography.labelMedium, color = onBgDim)
+                Column {
+                    Text("Biblia", style = MaterialTheme.typography.headlineSmall, color = onBg)
+                    Text("Vitabu 66 kwa Kiswahili", style = MaterialTheme.typography.labelMedium, color = onBgDim)
+                }
                 IconButton(onClick = onSearch) {
                     Icon(Icons.Filled.Search, contentDescription = "Tafuta andiko", tint = accent)
                 }
