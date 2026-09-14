@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -21,7 +23,10 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -162,4 +167,44 @@ fun <T> OneUiSegmentedRow(
             )
         }
     }
+}
+
+/** Wraps a row (typically [OneUiIconRow]) so swiping it either direction removes it -- used for
+ *  recent-search history entries on both the Bible and Saints search screens. [onRemove] is
+ *  called once the swipe passes the dismiss threshold; the caller is responsible for actually
+ *  deleting the underlying entry (this composable owns no state of its own beyond the gesture). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun OneUiSwipeToDismissRow(
+    onRemove: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (value == SwipeToDismissBoxValue.StartToEnd || value == SwipeToDismissBoxValue.EndToStart) {
+                onRemove()
+            }
+            // Always reject the state change itself: the row is about to disappear from the
+            // underlying list (via onRemove, above) rather than staying on screen in a
+            // "dismissed" visual state, so there's nothing for the swipe box itself to settle
+            // into -- it snaps back, and the content vanishes because the list shrank instead.
+            false
+        },
+    )
+    SwipeToDismissBox(
+        state = dismissState,
+        backgroundContent = {
+            val direction = dismissState.dismissDirection
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.errorContainer)
+                    .padding(horizontal = 20.dp),
+                contentAlignment = if (direction == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd,
+            ) {
+                Icon(Icons.Filled.Delete, contentDescription = "Futa", tint = MaterialTheme.colorScheme.onErrorContainer)
+            }
+        },
+        content = { content() },
+    )
 }

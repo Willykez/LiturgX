@@ -80,7 +80,6 @@ fun SavedScreen(
     val repository = remember { BibleBrowseRepository(context.applicationContext) }
     val userData = remember { BibleUserDataStore(context) }
     val accent = seasonAccent(color)
-    val onBg = MaterialTheme.colorScheme.onBackground
     val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
 
     var tab by remember { mutableStateOf(SavedTab.BOOKMARKS) }
@@ -109,14 +108,8 @@ fun SavedScreen(
     }
 
     Column(modifier.fillMaxSize().padding(top = 8.dp)) {
-        Text(
-            "Yaliyohifadhiwa",
-            style = MaterialTheme.typography.titleLarge,
-            color = onBg,
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
-        )
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             SavedTab.entries.forEach { t ->

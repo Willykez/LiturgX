@@ -27,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -54,6 +55,7 @@ import com.willykez.liturgx.data.bible.SearchScope
 import com.willykez.liturgx.ui.components.OneUiGroupCard
 import com.willykez.liturgx.ui.components.OneUiIconRow
 import com.willykez.liturgx.ui.components.OneUiRowDivider
+import com.willykez.liturgx.ui.components.OneUiSwipeToDismissRow
 import com.willykez.liturgx.ui.theme.seasonAccent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -196,12 +198,21 @@ fun BibleSearchScreen(
                     )
                     OneUiGroupCard {
                         recentSearches.forEachIndexed { index, term ->
-                            OneUiIconRow(
-                                icon = Icons.Filled.History,
-                                iconBackground = onBgDim,
-                                title = term,
-                                onClick = { query = term },
-                            )
+                            key(term) {
+                                OneUiSwipeToDismissRow(
+                                    onRemove = {
+                                        recentStore.remove(term)
+                                        recentSearches = recentStore.recentSearches()
+                                    }
+                                ) {
+                                    OneUiIconRow(
+                                        icon = Icons.Filled.History,
+                                        iconBackground = onBgDim,
+                                        title = term,
+                                        onClick = { query = term },
+                                    )
+                                }
+                            }
                             if (index != recentSearches.lastIndex) OneUiRowDivider()
                         }
                     }

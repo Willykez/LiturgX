@@ -277,6 +277,7 @@ fun LiturgXApp() {
                         composable(Dest.Watakatifu.route) {
                             SaintsScreen(
                                 saints = vm.saintsList(),
+                                color = vm.selectedResult.resolved.color,
                                 pendingSaintId = vm.pendingSaintId,
                                 onSaintHandled = { vm.consumeSaintJump() }
                             )
