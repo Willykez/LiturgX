@@ -28,59 +28,95 @@ import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.graphicsLayer
+import androidx.compose.ui.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 /**
- * Samsung One UI / Google Settings-style grouped list -- rounded card groups, colored icon
- * circles per row, MD3 segmented buttons for multi-choice pickers, per direct reference
- * screenshots. Originally built for Settings, now the shared list language for the whole app
- * (Home's upcoming-events sections, and onward) rather than a settings-only pattern, hence the
- * generic name -- one [OneUiGroupCard] per section, rows separated by [OneUiRowDivider] inset
- * to align with the text rather than running edge-to-edge under the icon.
+ * Samsung One UI / Google Settings-style grouped list.
+ *
+ * Rounded card groups, colored icon circles per row, MD3 segmented buttons
+ * for multi-choice pickers, and inset dividers.
+ *
+ * Originally built for Settings, this is now the shared list language for
+ * the whole app, including Home's upcoming-events sections.
  */
 
-/** Small uppercase label above a group card -- e.g. "USOMAJI", "SIKUKUU ZINAZOKUJA". */
+/**
+ * Small uppercase label above a group card.
+ *
+ * Examples:
+ * - "USOMAJI"
+ * - "SIKUKUU ZINAZOKUJA"
+ */
 @Composable
-fun OneUiSectionLabel(text: String, modifier: Modifier = Modifier) {
+fun OneUiSectionLabel(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
     Text(
-        text,
+        text = text,
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = modifier.padding(start = 8.dp, bottom = 6.dp),
+        modifier = modifier.padding(
+            start = 8.dp,
+            bottom = 6.dp,
+        ),
     )
 }
 
-/** The rounded card container for one section's rows. */
+/**
+ * Rounded card container for one section's rows.
+ */
 @Composable
-fun OneUiGroupCard(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+fun OneUiGroupCard(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
     Column(
-        modifier
+        modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)),
+            .background(
+                MaterialTheme.colorScheme.surfaceVariant.copy(
+                    alpha = 0.45f,
+                ),
+            ),
     ) {
         content()
     }
 }
 
-/** A hairline between two rows in the same card, inset to align with the row's text (not the
- *  icon), so it doesn't visually cut through the icon column. */
+/**
+ * Hairline divider between rows in the same card.
+ *
+ * The divider is inset so it aligns with the row text instead of
+ * visually cutting through the icon column.
+ */
 @Composable
 fun OneUiRowDivider() {
     HorizontalDivider(
         modifier = Modifier.padding(start = 64.dp),
-        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
+        color = MaterialTheme.colorScheme.outline.copy(
+            alpha = 0.4f,
+        ),
         thickness = 1.dp,
     )
 }
 
-/** One row: a colored icon circle, title/subtitle, and optional trailing content (switch,
- *  value text, chevron) -- the One UI "colored icon circle" list-item pattern. */
+/**
+ * Standard One UI-style row.
+ *
+ * Contains:
+ * - Colored circular icon
+ * - Title
+ * - Optional subtitle
+ * - Optional trailing content
+ * - Optional click action
+ */
 @Composable
 fun OneUiIconRow(
     icon: ImageVector,
@@ -94,37 +130,75 @@ fun OneUiIconRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .let { if (onClick != null) it.clickable(onClick = onClick) else it }
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .let { modifier ->
+                if (onClick != null) {
+                    modifier.clickable(onClick = onClick)
+                } else {
+                    modifier
+                }
+            }
+            .padding(
+                horizontal = 16.dp,
+                vertical = 14.dp,
+            ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            modifier = Modifier.size(36.dp).clip(CircleShape).background(iconBackground),
+            modifier = Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(iconBackground),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(20.dp),
+            )
         }
-        Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onBackground)
+
+        Spacer(
+            modifier = Modifier.width(14.dp),
+        )
+
+        Column(
+            modifier = Modifier.weight(1f),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+
             if (subtitle != null) {
                 Text(
-                    subtitle,
+                    text = subtitle,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = subtitleMaxLines,
-                    overflow = if (subtitleMaxLines < Int.MAX_VALUE) TextOverflow.Ellipsis else TextOverflow.Clip,
+                    overflow = if (subtitleMaxLines < Int.MAX_VALUE) {
+                        TextOverflow.Ellipsis
+                    } else {
+                        TextOverflow.Clip
+                    },
                 )
             }
         }
+
         if (trailing != null) {
-            Spacer(Modifier.width(12.dp))
+            Spacer(
+                modifier = Modifier.width(12.dp),
+            )
+
             trailing()
         }
     }
 }
 
-/** A row whose only content is a switch on the trailing edge -- the most common settings-row shape. */
+/**
+ * One UI-style settings row with a switch on the trailing edge.
+ */
 @Composable
 fun OneUiSwitchRow(
     icon: ImageVector,
@@ -135,14 +209,31 @@ fun OneUiSwitchRow(
     accent: Color,
     onCheckedChange: (Boolean) -> Unit,
 ) {
-    OneUiIconRow(icon = icon, iconBackground = iconBackground, title = title, subtitle = subtitle) {
-        Switch(checked = checked, onCheckedChange = onCheckedChange, colors = SwitchDefaults.colors(checkedTrackColor = accent))
+    OneUiIconRow(
+        icon = icon,
+        iconBackground = iconBackground,
+        title = title,
+        subtitle = subtitle,
+    ) {
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedTrackColor = accent,
+            ),
+        )
     }
 }
 
-/** MD3 segmented button row (see the "Segmented Buttons" reference) for a small fixed set of
- *  mutually-exclusive options -- used for theme mode, font style, and PDF export mode, in place
- *  of the plain tap-a-text-label pickers used before. */
+/**
+ * MD3 segmented button row for a small fixed set of mutually-exclusive
+ * options.
+ *
+ * Common uses:
+ * - Theme mode
+ * - Font style
+ * - PDF export mode
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun <T> OneUiSegmentedRow(
@@ -151,31 +242,47 @@ fun <T> OneUiSegmentedRow(
     accent: Color,
     onSelect: (T) -> Unit,
 ) {
-    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+    SingleChoiceSegmentedButtonRow(
+        modifier = Modifier.fillMaxWidth(),
+    ) {
         options.forEachIndexed { index, (value, label) ->
             SegmentedButton(
                 selected = value == selected,
-                onClick = { onSelect(value) },
-                shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                onClick = {
+                    onSelect(value)
+                },
+                shape = SegmentedButtonDefaults.itemShape(
+                    index = index,
+                    count = options.size,
+                ),
                 colors = SegmentedButtonDefaults.colors(
                     activeContainerColor = accent,
                     activeContentColor = Color.White,
                     activeBorderColor = accent,
                 ),
-                label = { Text(label, maxLines = 1) },
+                label = {
+                    Text(
+                        text = label,
+                        maxLines = 1,
+                    )
+                },
             )
         }
     }
 }
 
-/** Wraps a row (typically [OneUiIconRow]) so swiping it either direction removes it -- used for
- *  recent-search history entries on both the Bible and Saints search screens. Styled after the
- *  Pixel notification shade's swipe-to-dismiss: the row just translates with your finger and
- *  fades out as it goes, with no revealed delete button or colored background underneath (no
- *  [backgroundContent] at all, rather than one styled to be invisible -- there's nothing there
- *  to accidentally show through mid-swipe). [onRemove] is called once the swipe passes the
- *  dismiss threshold; the caller is responsible for actually deleting the underlying entry
- *  (this composable owns no state of its own beyond the gesture). */
+/**
+ * Wraps a row so swiping it in either direction removes it.
+ *
+ * Used for recent-search history entries on the Bible and Saints
+ * search screens.
+ *
+ * The row translates and fades while being swiped. No delete/reveal
+ * background is displayed.
+ *
+ * [onRemove] is called once the swipe passes the dismiss threshold.
+ * The caller is responsible for removing the underlying item.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OneUiSwipeToDismissRow(
@@ -184,20 +291,33 @@ fun OneUiSwipeToDismissRow(
 ) {
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
-            if (value == SwipeToDismissBoxValue.StartToEnd || value == SwipeToDismissBoxValue.EndToStart) {
+            if (
+                value == SwipeToDismissBoxValue.StartToEnd ||
+                value == SwipeToDismissBoxValue.EndToStart
+            ) {
                 onRemove()
             }
-            // Always reject the state change itself: the row is about to disappear from the
-            // underlying list (via onRemove, above) rather than staying on screen in a
-            // "dismissed" visual state, so there's nothing for the swipe box itself to settle
-            // into -- it snaps back, and the content vanishes because the list shrank instead.
+
+            /*
+             * Always reject the dismissed state itself.
+             *
+             * The underlying list is expected to remove the item through
+             * onRemove(), so the SwipeToDismissBox does not need to remain
+             * in a dismissed state.
+             */
             false
         },
     )
+
     SwipeToDismissBox(
         state = dismissState,
         backgroundContent = {},
-        modifier = Modifier.graphicsLayer { alpha = 1f - dismissState.progress.coerceIn(0f, 1f) },
-        content = { content() },
+        modifier = Modifier.graphicsLayer {
+            alpha = 1f - dismissState.progress.coerceIn(0f, 1f)
+        },
+        content = {
+            content()
+        },
     )
 }
+
