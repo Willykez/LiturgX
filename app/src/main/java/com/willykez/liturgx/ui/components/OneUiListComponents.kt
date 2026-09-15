@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -31,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
@@ -170,9 +169,13 @@ fun <T> OneUiSegmentedRow(
 }
 
 /** Wraps a row (typically [OneUiIconRow]) so swiping it either direction removes it -- used for
- *  recent-search history entries on both the Bible and Saints search screens. [onRemove] is
- *  called once the swipe passes the dismiss threshold; the caller is responsible for actually
- *  deleting the underlying entry (this composable owns no state of its own beyond the gesture). */
+ *  recent-search history entries on both the Bible and Saints search screens. Styled after the
+ *  Pixel notification shade's swipe-to-dismiss: the row just translates with your finger and
+ *  fades out as it goes, with no revealed delete button or colored background underneath (no
+ *  [backgroundContent] at all, rather than one styled to be invisible -- there's nothing there
+ *  to accidentally show through mid-swipe). [onRemove] is called once the swipe passes the
+ *  dismiss threshold; the caller is responsible for actually deleting the underlying entry
+ *  (this composable owns no state of its own beyond the gesture). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OneUiSwipeToDismissRow(
@@ -193,18 +196,8 @@ fun OneUiSwipeToDismissRow(
     )
     SwipeToDismissBox(
         state = dismissState,
-        backgroundContent = {
-            val direction = dismissState.dismissDirection
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.errorContainer)
-                    .padding(horizontal = 20.dp),
-                contentAlignment = if (direction == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd,
-            ) {
-                Icon(Icons.Filled.Delete, contentDescription = "Futa", tint = MaterialTheme.colorScheme.onErrorContainer)
-            }
-        },
+        backgroundContent = {},
+        modifier = Modifier.graphicsLayer { alpha = 1f - dismissState.progress.coerceIn(0f, 1f) },
         content = { content() },
     )
 }
