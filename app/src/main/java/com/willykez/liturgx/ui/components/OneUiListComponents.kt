@@ -2,6 +2,7 @@ package com.willykez.liturgx.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,113 +11,78 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 /**
- * Samsung One UI / Google Settings-style grouped list.
- *
- * Rounded card groups, colored icon circles per row, MD3 segmented buttons
- * for multi-choice pickers, and inset dividers.
- *
- * Originally built for Settings, this is now the shared list language for
- * the whole app, including Home's upcoming-events sections.
+ * Samsung One UI / Google Settings-style grouped list -- rounded card groups, colored icon
+ * circles per row, MD3 segmented buttons for multi-choice pickers, per direct reference
+ * screenshots. Originally built for Settings, now the shared list language for the whole app
+ * (Home's upcoming-events sections, and onward) rather than a settings-only pattern, hence the
+ * generic name -- one [OneUiGroupCard] per section, rows separated by [OneUiRowDivider] inset
+ * to align with the text rather than running edge-to-edge under the icon.
  */
 
-/**
- * Small uppercase label above a group card.
- *
- * Examples:
- * - "USOMAJI"
- * - "SIKUKUU ZINAZOKUJA"
- */
+/** Small uppercase label above a group card -- e.g. "USOMAJI", "SIKUKUU ZINAZOKUJA". */
 @Composable
-fun OneUiSectionLabel(
-    text: String,
-    modifier: Modifier = Modifier,
-) {
+fun OneUiSectionLabel(text: String, modifier: Modifier = Modifier) {
     Text(
-        text = text,
+        text,
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = modifier.padding(
-            start = 8.dp,
-            bottom = 6.dp,
-        ),
+        modifier = modifier.padding(start = 8.dp, bottom = 6.dp),
     )
 }
 
-/**
- * Rounded card container for one section's rows.
- */
+/** The rounded card container for one section's rows. */
 @Composable
-fun OneUiGroupCard(
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
+fun OneUiGroupCard(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     Column(
-        modifier = modifier
+        modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(
-                MaterialTheme.colorScheme.surfaceVariant.copy(
-                    alpha = 0.45f,
-                ),
-            ),
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)),
     ) {
         content()
     }
 }
 
-/**
- * Hairline divider between rows in the same card.
- *
- * The divider is inset so it aligns with the row text instead of
- * visually cutting through the icon column.
- */
+/** A hairline between two rows in the same card, inset to align with the row's text (not the
+ *  icon), so it doesn't visually cut through the icon column. */
 @Composable
 fun OneUiRowDivider() {
     HorizontalDivider(
         modifier = Modifier.padding(start = 64.dp),
-        color = MaterialTheme.colorScheme.outline.copy(
-            alpha = 0.4f,
-        ),
+        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
         thickness = 1.dp,
     )
 }
 
-/**
- * Standard One UI-style row.
- *
- * Contains:
- * - Colored circular icon
- * - Title
- * - Optional subtitle
- * - Optional trailing content
- * - Optional click action
- */
+/** One row: a colored icon circle, title/subtitle, and optional trailing content (switch,
+ *  value text, chevron) -- the One UI "colored icon circle" list-item pattern. */
 @Composable
 fun OneUiIconRow(
     icon: ImageVector,
@@ -130,75 +96,37 @@ fun OneUiIconRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .let { modifier ->
-                if (onClick != null) {
-                    modifier.clickable(onClick = onClick)
-                } else {
-                    modifier
-                }
-            }
-            .padding(
-                horizontal = 16.dp,
-                vertical = 14.dp,
-            ),
+            .let { if (onClick != null) it.clickable(onClick = onClick) else it }
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(iconBackground),
+            modifier = Modifier.size(36.dp).clip(CircleShape).background(iconBackground),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(20.dp),
-            )
+            Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
         }
-
-        Spacer(
-            modifier = Modifier.width(14.dp),
-        )
-
-        Column(
-            modifier = Modifier.weight(1f),
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onBackground)
             if (subtitle != null) {
                 Text(
-                    text = subtitle,
+                    subtitle,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = subtitleMaxLines,
-                    overflow = if (subtitleMaxLines < Int.MAX_VALUE) {
-                        TextOverflow.Ellipsis
-                    } else {
-                        TextOverflow.Clip
-                    },
+                    overflow = if (subtitleMaxLines < Int.MAX_VALUE) TextOverflow.Ellipsis else TextOverflow.Clip,
                 )
             }
         }
-
         if (trailing != null) {
-            Spacer(
-                modifier = Modifier.width(12.dp),
-            )
-
+            Spacer(Modifier.width(12.dp))
             trailing()
         }
     }
 }
 
-/**
- * One UI-style settings row with a switch on the trailing edge.
- */
+/** A row whose only content is a switch on the trailing edge -- the most common settings-row shape. */
 @Composable
 fun OneUiSwitchRow(
     icon: ImageVector,
@@ -209,31 +137,14 @@ fun OneUiSwitchRow(
     accent: Color,
     onCheckedChange: (Boolean) -> Unit,
 ) {
-    OneUiIconRow(
-        icon = icon,
-        iconBackground = iconBackground,
-        title = title,
-        subtitle = subtitle,
-    ) {
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedTrackColor = accent,
-            ),
-        )
+    OneUiIconRow(icon = icon, iconBackground = iconBackground, title = title, subtitle = subtitle) {
+        Switch(checked = checked, onCheckedChange = onCheckedChange, colors = SwitchDefaults.colors(checkedTrackColor = accent))
     }
 }
 
-/**
- * MD3 segmented button row for a small fixed set of mutually-exclusive
- * options.
- *
- * Common uses:
- * - Theme mode
- * - Font style
- * - PDF export mode
- */
+/** MD3 segmented button row (see the "Segmented Buttons" reference) for a small fixed set of
+ *  mutually-exclusive options -- used for theme mode, font style, and PDF export mode, in place
+ *  of the plain tap-a-text-label pickers used before. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun <T> OneUiSegmentedRow(
@@ -242,81 +153,58 @@ fun <T> OneUiSegmentedRow(
     accent: Color,
     onSelect: (T) -> Unit,
 ) {
-    SingleChoiceSegmentedButtonRow(
-        modifier = Modifier.fillMaxWidth(),
-    ) {
+    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
         options.forEachIndexed { index, (value, label) ->
             SegmentedButton(
                 selected = value == selected,
-                onClick = {
-                    onSelect(value)
-                },
-                shape = SegmentedButtonDefaults.itemShape(
-                    index = index,
-                    count = options.size,
-                ),
+                onClick = { onSelect(value) },
+                shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
                 colors = SegmentedButtonDefaults.colors(
                     activeContainerColor = accent,
                     activeContentColor = Color.White,
                     activeBorderColor = accent,
                 ),
-                label = {
-                    Text(
-                        text = label,
-                        maxLines = 1,
-                    )
-                },
+                label = { Text(label, maxLines = 1) },
             )
         }
     }
 }
 
-/**
- * Wraps a row so swiping it in either direction removes it.
- *
- * Used for recent-search history entries on the Bible and Saints
- * search screens.
- *
- * The row translates and fades while being swiped. No delete/reveal
- * background is displayed.
- *
- * [onRemove] is called once the swipe passes the dismiss threshold.
- * The caller is responsible for removing the underlying item.
- */
-@OptIn(ExperimentalMaterial3Api::class)
+/** Compact "recent searches" chips -- replaces an earlier swipe-to-dismiss row list, which took
+ *  a full row of vertical space per entry for what's meant to be a quick, disposable set of past
+ *  search terms (and, worse, had a real bug: fading the row via `SwipeToDismissBoxState.progress`
+ *  turned out to make every row fully transparent at rest, since that property means "progress
+ *  toward the settled position" -- 1.0 when nothing is happening -- not "how far dragged"; see
+ *  the old KDoc in git history for the postmortem). Chips scroll horizontally in a single line
+ *  (rather than wrapping) -- takes less vertical space than wrapping ever would, and [LazyRow] is
+ *  unambiguously stable, unlike relying on exactly which Compose Foundation version stabilized
+ *  [androidx.compose.foundation.layout.FlowRow]. Each chip has its own small "x" to remove it --
+ *  no gesture state to get wrong, no per-row swipe container. */
 @Composable
-fun OneUiSwipeToDismissRow(
-    onRemove: () -> Unit,
-    content: @Composable () -> Unit,
+fun OneUiHistoryChips(
+    terms: List<String>,
+    accent: Color,
+    onSelect: (String) -> Unit,
+    onRemove: (String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            if (
-                value == SwipeToDismissBoxValue.StartToEnd ||
-                value == SwipeToDismissBoxValue.EndToStart
-            ) {
-                onRemove()
-            }
-
-            /*
-             * Always reject the dismissed state itself.
-             *
-             * The underlying list is expected to remove the item through
-             * onRemove(), so the SwipeToDismissBox does not need to remain
-             * in a dismissed state.
-             */
-            false
-        },
-    )
-
-    SwipeToDismissBox(
-        state = dismissState,
-        backgroundContent = {},
-        modifier = Modifier.graphicsLayer {
-            alpha = 1f - dismissState.progress.coerceIn(0f, 1f)
-        },
-        content = {
-            content()
-        },
-    )
+    LazyRow(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items(terms) { term ->
+            InputChip(
+                selected = false,
+                onClick = { onSelect(term) },
+                label = { Text(term) },
+                trailingIcon = {
+                    Icon(
+                        Icons.Filled.Close,
+                        contentDescription = "Ondoa",
+                        modifier = Modifier.size(16.dp).clickable { onRemove(term) },
+                    )
+                },
+            )
+        }
+    }
 }

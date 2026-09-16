@@ -15,7 +15,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
@@ -26,7 +25,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -39,9 +37,9 @@ import com.willykez.liturgx.core.LiturgicalColor
 import com.willykez.liturgx.core.Saint
 import com.willykez.liturgx.data.RecentSearchesStore
 import com.willykez.liturgx.ui.components.OneUiGroupCard
+import com.willykez.liturgx.ui.components.OneUiHistoryChips
 import com.willykez.liturgx.ui.components.OneUiIconRow
 import com.willykez.liturgx.ui.components.OneUiRowDivider
-import com.willykez.liturgx.ui.components.OneUiSwipeToDismissRow
 import com.willykez.liturgx.ui.theme.seasonAccent
 
 /**
@@ -133,26 +131,15 @@ fun SaintsScreen(
                 color = onBgDim,
                 modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
             )
-            OneUiGroupCard {
-                recentSearches.forEachIndexed { index, term ->
-                    key(term) {
-                        OneUiSwipeToDismissRow(
-                            onRemove = {
-                                recentStore.remove(term)
-                                recentSearches = recentStore.recentSearches()
-                            }
-                        ) {
-                            OneUiIconRow(
-                                icon = Icons.Filled.History,
-                                iconBackground = onBgDim,
-                                title = term,
-                                onClick = { query = term },
-                            )
-                        }
-                    }
-                    if (index != recentSearches.lastIndex) OneUiRowDivider()
-                }
-            }
+            OneUiHistoryChips(
+                terms = recentSearches,
+                accent = accent,
+                onSelect = { term -> query = term },
+                onRemove = { term ->
+                    recentStore.remove(term)
+                    recentSearches = recentStore.recentSearches()
+                },
+            )
             Spacer(Modifier.height(14.dp))
         }
 
