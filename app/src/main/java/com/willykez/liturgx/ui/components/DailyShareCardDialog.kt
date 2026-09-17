@@ -1,5 +1,6 @@
 package com.willykez.liturgx.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -9,17 +10,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.willykez.liturgx.core.LiturgicalColor
 import com.willykez.liturgx.data.sharing.DayCardReading
 import com.willykez.liturgx.ui.theme.seasonAccent
 
-/** Full-day counterpart to [ShareCardDialog] -- same capture-while-visible pattern, wrapping
- *  [DailyLiturgicalCard] instead of a single [LiturgicalCard]. */
 @Composable
 fun DailyShareCardDialog(
     dateText: String,
@@ -31,43 +32,86 @@ fun DailyShareCardDialog(
     val graphicsLayer = rememberGraphicsLayer()
     val accent = seasonAccent(liturgicalColor)
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnClickOutside = true,
+            dismissOnBackPress = true
+        )
+    ) {
+
         Column(
-            Modifier
+            modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = 560.dp)
+                .fillMaxHeight()
+                .background(Color(0xFF09070D))
                 .verticalScroll(rememberScrollState())
-                .padding(vertical = 8.dp),
+                .padding(
+                    horizontal = 14.dp,
+                    vertical = 18.dp
+                ),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+
+            Text(
+                "MUONEKANO WA KUSHIRIKI",
+                color = Color.White.copy(alpha = 0.55f),
+                style = MaterialTheme.typography.labelSmall,
+                letterSpacing = 1.5.sp
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            /*
+             * The Box records exactly the rendered card.
+             * ImageSaveShareButtons receives that same bitmap,
+             * so the upgraded visual is also the exported PNG.
+             */
             Box(
-                Modifier.drawWithContent {
-                    graphicsLayer.record { this@drawWithContent.drawContent() }
-                    drawLayer(graphicsLayer)
-                }
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .drawWithContent {
+
+                        graphicsLayer.record {
+                            this@drawWithContent.drawContent()
+                        }
+
+                        drawLayer(graphicsLayer)
+                    }
             ) {
                 DailyLiturgicalCard(
                     dateText = dateText,
                     seasonText = seasonText,
                     readings = readings,
-                    liturgicalColor = liturgicalColor
+                    liturgicalColor = liturgicalColor,
+                    brandName = "LiturgX"
                 )
             }
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(22.dp))
 
             ImageSaveShareButtons(
                 accent = accent,
-                fileName = sanitizeFileName("Masomo_$dateText") + ".png",
-                getBitmap = { graphicsLayer.toImageBitmap().asAndroidBitmap() }
+                fileName = sanitizeFileName(
+                    "LiturgX_Masomo_$dateText"
+                ) + ".png",
+                getBitmap = {
+                    graphicsLayer
+                        .toImageBitmap()
+                        .asAndroidBitmap()
+                }
             )
 
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(10.dp))
+
             Text(
                 "Gusa nje ya kadi kufunga",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = Color.White.copy(alpha = 0.45f),
+                style = MaterialTheme.typography.labelSmall
             )
+
+            Spacer(Modifier.height(10.dp))
         }
     }
 }
