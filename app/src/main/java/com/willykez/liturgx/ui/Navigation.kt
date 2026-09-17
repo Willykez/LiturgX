@@ -3,6 +3,7 @@ package com.willykez.liturgx.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -12,12 +13,14 @@ import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
@@ -25,7 +28,6 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -143,8 +145,18 @@ fun LiturgXApp() {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     val sheetScope = rememberCoroutineScope()
 
+    // The currently-visible screen pushes its own title/subtitle up here (see each screen's
+    // onHeaderTextChange param) rather than Navigation.kt trying to compute every screen's
+    // title itself -- Calendar's, in particular, depends on state (which month page is
+    // currently centered) that only exists inside CalendarScreen. Biblia's search action is
+    // handled separately: BibleScreen hands back a single stable trigger once, and the shared
+    // bar just decides whether to show the icon (currentRoute == Biblia) rather than tracking
+    // Biblia's own internal sub-route -- see the comment at that composable() call for why.
+    var topBarTitle by remember { mutableStateOf("") }
+    var topBarSubtitle by remember { mutableStateOf<String?>(null) }
+    var bibleSearchTrigger by remember { mutableStateOf<() -> Unit>({}) }
+
     LiturgXTheme(accent = accentColor, darkTheme = darkTheme, textScale = vm.textScale) {
-        val background = MaterialTheme.colorScheme.background
         val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
 
         // Painted ONCE here, full-bleed behind the status bar too (this Box is never inset by
@@ -154,40 +166,50 @@ fun LiturgXApp() {
         // Whether this shows the liturgical-colour wash or a plain solid background is a
         // Settings toggle (vm.useLiturgicalBackground) -- either way something opaque always
         // fills this layer, since the Scaffold and its screen content above are transparent and
-        // rely on it. The top and bottom bars paint their own solid background regardless of
-        // this toggle (see their containerColor below), so the app's chrome stays plain even
-        // when a season's colour would otherwise clash with it.
+        // rely on it. The top and bottom bars are transparent too (see their containerColor
+        // below) so this one backdrop shows through everywhere uniformly -- no separate "chrome
+        // colour" strip cutting the screen into visibly different-coloured zones.
         Box(Modifier.fillMaxSize()) {
             if (vm.useLiturgicalBackground) {
                 SeasonBackdrop(accentColor, modifier = Modifier.fillMaxSize())
             } else {
-                Box(Modifier.fillMaxSize().background(background))
+                Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
             }
 
-            // No title text in the bar -- each screen already states what it is in its own
-            // content (see e.g. BookListScreen's "Biblia" heading), so a second, tab-name label
-            // up here next to the streak badge and settings gear was pure repetition. The bar
-            // itself still slides fully off-screen on scroll-down and back on scroll-up
-            // (Material's "enter always" behavior) -- with no title to anchor a size collapse
-            // the way a Large/Medium top app bar does, hiding the whole bar is the collapsing
-            // behavior that actually makes sense here, and it's a bigger win anyway: more of the
-            // screen for readings while scrolling, the bar back the instant you scroll up for it.
-            val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+            // A collapsing/expandable bar: title + subtitle show at full size at the top of the
+            // scroll, and shrink into a smaller bar that stays pinned on screen as you scroll
+            // down -- never fully hidden, unlike the previous "enter always" version that slid
+            // the whole bar away. The search icon only appears on the Biblia tab; the streak
+            // badge and settings gear are on every screen, same as before.
+            val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
             Scaffold(
                 containerColor = Color.Transparent,
                 modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
                 topBar = {
-                    TopAppBar(
-                        title = {},
+                    LargeTopAppBar(
+                        title = {
+                            Column {
+                                Text(topBarTitle, style = MaterialTheme.typography.titleLarge, maxLines = 1)
+                                topBarSubtitle?.let {
+                                    Text(it, style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                                }
+                            }
+                        },
                         actions = {
+                            if (currentRoute == Dest.Biblia.route) {
+                                IconButton(onClick = bibleSearchTrigger) {
+                                    Icon(Icons.Filled.Search, contentDescription = "Tafuta andiko", tint = seasonAccent(accentColor))
+                                }
+                            }
                             StreakBadge(today = vm.today, accent = seasonAccent(accentColor))
                             IconButton(onClick = { showSettingsSheet = true }) {
                                 Icon(Icons.Filled.Settings, contentDescription = "Mipangilio")
                             }
                         },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = background,
+                        colors = TopAppBarDefaults.largeTopAppBarColors(
+                            containerColor = Color.Transparent,
+                            scrolledContainerColor = Color.Transparent,
                             titleContentColor = MaterialTheme.colorScheme.onBackground,
                             actionIconContentColor = seasonAccent(accentColor)
                         ),
@@ -196,7 +218,7 @@ fun LiturgXApp() {
                     )
                 },
                 bottomBar = {
-                    NavigationBar(containerColor = background) {
+                    NavigationBar(containerColor = Color.Transparent) {
                         val accent = seasonAccent(accentColor)
                         destinations.forEach { dest ->
                             val selected = currentRoute == dest.route
@@ -251,7 +273,8 @@ fun LiturgXApp() {
                                         launchSingleTop = true
                                         restoreState = true
                                     }
-                                }
+                                },
+                                onHeaderTextChange = { title, subtitle -> topBarTitle = title; topBarSubtitle = subtitle }
                             )
                         }
                         composable(Dest.Kalenda.route) {
@@ -275,7 +298,8 @@ fun LiturgXApp() {
                                         launchSingleTop = true
                                         restoreState = true
                                     }
-                                }
+                                },
+                                onHeaderTextChange = { title, subtitle -> topBarTitle = title; topBarSubtitle = subtitle }
                             )
                         }
                         composable(Dest.Watakatifu.route) {
@@ -283,14 +307,17 @@ fun LiturgXApp() {
                                 saints = vm.saintsList(),
                                 color = vm.selectedResult.resolved.color,
                                 pendingSaintId = vm.pendingSaintId,
-                                onSaintHandled = { vm.consumeSaintJump() }
+                                onSaintHandled = { vm.consumeSaintJump() },
+                                onHeaderTextChange = { title, subtitle -> topBarTitle = title; topBarSubtitle = subtitle }
                             )
                         }
                         composable(Dest.Biblia.route) {
                             BibleScreen(
                                 currentColor = vm.selectedResult.resolved.color,
                                 pendingJump = vm.pendingBibleJump,
-                                onJumpHandled = { vm.consumeBibleJump() }
+                                onJumpHandled = { vm.consumeBibleJump() },
+                                onHeaderTextChange = { title, subtitle -> topBarTitle = title; topBarSubtitle = subtitle },
+                                onSearchTriggerReady = { trigger -> bibleSearchTrigger = trigger }
                             )
                         }
                         composable(Dest.Hifadhi.route) {
@@ -306,7 +333,8 @@ fun LiturgXApp() {
                                         launchSingleTop = true
                                         restoreState = true
                                     }
-                                }
+                                },
+                                onHeaderTextChange = { title, subtitle -> topBarTitle = title; topBarSubtitle = subtitle }
                             )
                         }
                     }
@@ -317,7 +345,7 @@ fun LiturgXApp() {
                 ModalBottomSheet(
                     onDismissRequest = { showSettingsSheet = false },
                     sheetState = sheetState,
-                    containerColor = background
+                    containerColor = MaterialTheme.colorScheme.background
                 ) {
                     SettingsSheetContent(
                         region = vm.region,

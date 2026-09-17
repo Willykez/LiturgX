@@ -62,11 +62,16 @@ fun SaintsScreen(
     color: LiturgicalColor,
     pendingSaintId: Int? = null,
     onSaintHandled: () -> Unit = {},
+    onHeaderTextChange: (title: String, subtitle: String?) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val recentStore = remember { RecentSearchesStore(context, namespace = "saints") }
     val accent = seasonAccent(color)
+
+    LaunchedEffect(Unit) {
+        onHeaderTextChange("Kalenda ya Watakatifu", "Orodha teule ya sikukuu na kumbukumbu")
+    }
 
     var query by remember { mutableStateOf("") }
     var recentSearches by remember { mutableStateOf(recentStore.recentSearches()) }
@@ -90,16 +95,8 @@ fun SaintsScreen(
     }
 
     val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
-    val onBg = MaterialTheme.colorScheme.onBackground
 
     Column(modifier.fillMaxSize().padding(20.dp)) {
-        Text("Kalenda ya Watakatifu", style = MaterialTheme.typography.headlineSmall, color = onBg)
-        Text(
-            "Orodha teule ya sikukuu na kumbukumbu",
-            style = MaterialTheme.typography.labelMedium,
-            color = onBgDim
-        )
-        Spacer(Modifier.height(14.dp))
         OutlinedTextField(
             value = query,
             onValueChange = { query = it },

@@ -89,6 +89,7 @@ fun HomeScreen(
     region: RegionSettings,
     onOpenInBible: (bookId: Int, chapterNum: Int, verseNum: Int) -> Unit = { _, _, _ -> },
     onOpenSaint: (saintId: Int) -> Unit = {},
+    onHeaderTextChange: (title: String, subtitle: String?) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -180,6 +181,7 @@ fun HomeScreen(
         },
         onOpenInBible = onOpenInBible,
         onOpenSaint = onOpenSaint,
+        onHeaderTextChange = onHeaderTextChange,
         modifier = modifier
     )
 }

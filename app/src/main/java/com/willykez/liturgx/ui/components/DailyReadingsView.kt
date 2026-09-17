@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.TextSnippet
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,15 +46,23 @@ fun DailyReadingsView(
     showHeader: Boolean = true,
     onOpenInBible: ((bookId: Int, chapterNum: Int, verseNum: Int) -> Unit)? = null,
     onOpenSaint: ((saintId: Int) -> Unit)? = null,
+    onHeaderTextChange: ((title: String, subtitle: String?) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val resolved = dayResult.resolved
     val accent = seasonAccent(resolved.color)
-    val onBg = MaterialTheme.colorScheme.onBackground
     val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
     val d = resolved.date
     val dateLine = "${SwahiliDate.weekdayName(d.dayOfWeek)}, ${d.dayOfMonth} ${SwahiliDate.monthName(d.monthValue)} ${d.year}"
     val seasonLabel = resolved.overridingSaint?.jina ?: resolved.label
+
+    // Reports the plain date/season-name pair up to the shared collapsing top bar (see
+    // Navigation.kt) when this is Home's own header (showHeader) -- the richer content below
+    // (the liturgical-colour seal, the colour/cycle line, the saint chip) stays in-screen since
+    // it's more than a plain title, not something the shared chrome tries to reproduce.
+    LaunchedEffect(showHeader, dateLine, seasonLabel) {
+        if (showHeader) onHeaderTextChange?.invoke(dateLine, seasonLabel)
+    }
 
     val context = LocalContext.current
     val repository = remember { BibleRepository(context.applicationContext) }
@@ -161,25 +170,16 @@ fun DailyReadingsView(
                 }
 
                 if (showHeader) {
-                    Text(dateLine, style = MaterialTheme.typography.labelMedium, color = onBgDim)
-                    Spacer(Modifier.height(6.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         LiturgicalSeal(resolved.color, size = 40.dp)
                         Spacer(Modifier.width(14.dp))
-                        Column {
-                            Text(
-                                seasonLabel,
-                                style = MaterialTheme.typography.headlineSmall,
-                                color = onBg
-                            )
-                            Text(
-                                "Rangi ya Liturujia: ${resolved.color.swahili}"
-                                        + (resolved.cycleYear?.let { " · Mwaka $it" } ?: "")
-                                        + (resolved.weekdayCycle?.let { " · Mzunguko $it" } ?: ""),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = accent
-                            )
-                        }
+                        Text(
+                            "Rangi ya Liturujia: ${resolved.color.swahili}"
+                                    + (resolved.cycleYear?.let { " · Mwaka $it" } ?: "")
+                                    + (resolved.weekdayCycle?.let { " · Mzunguko $it" } ?: ""),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = accent
+                        )
                     }
 
                     resolved.overridingSaint?.let { saint ->

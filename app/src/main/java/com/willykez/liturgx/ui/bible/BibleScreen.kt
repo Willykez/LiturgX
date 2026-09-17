@@ -13,9 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,7 +22,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -57,6 +54,8 @@ fun BibleScreen(
     currentColor: LiturgicalColor,
     pendingJump: BibleJumpTarget? = null,
     onJumpHandled: () -> Unit = {},
+    onHeaderTextChange: (title: String, subtitle: String?) -> Unit = { _, _ -> },
+    onSearchTriggerReady: (() -> Unit) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -72,6 +71,35 @@ fun BibleScreen(
             books.firstOrNull { it.id == bookId }?.let { book -> BibleRoute.Reader(book, chapterNum) }
         }
         mutableStateOf(resumed ?: BibleRoute.Books)
+    }
+
+    // Reports the book-list's title/subtitle up to the shared collapsing top bar (see
+    // Navigation.kt) -- only from the book-list (landing) state. The chapter grid, chapter
+    // reader, and search screen keep their own in-content headers untouched rather than also
+    // reporting up: the reader in particular already shows its own "{book} {chapter}" header
+    // with prev/next chevrons, and reporting the same text to the shared bar would just
+    // recreate the exact duplicate-heading problem fixed a few rounds back. Leaving those three
+    // un-reported means the shared bar simply keeps showing "Biblia" while browsing deeper,
+    // rather than trying (and risking getting it wrong) to mirror every sub-screen.
+    LaunchedEffect(route) {
+        if (route is BibleRoute.Books) {
+            onHeaderTextChange("Biblia", "Vitabu 66 kwa Kiswahili")
+        }
+    }
+
+    // The search trigger is reported exactly once, regardless of which route this tab happens
+    // to start on (it can start straight in a resumed chapter, not the book list -- see the
+    // resume logic above) -- unlike the title/subtitle, which only make sense while looking at
+    // the book list, "jump to search" is valid from anywhere in this tab, so it doesn't need
+    // the `route is BibleRoute.Books` guard the effect above has, and lives in its own callback
+    // entirely rather than sharing one with the title -- an earlier version merged them into a
+    // single 3-arg callback, and every return to the book list re-fired it with a null search
+    // action, silently overwriting the real one Navigation.kt had already stored. Two separate
+    // callbacks means neither can step on the other's last-reported value. The closure captures
+    // the `route` setter itself, not a route value, so it stays correct no matter how `route`
+    // changes after this fires.
+    LaunchedEffect(Unit) {
+        onSearchTriggerReady { route = BibleRoute.Search }
     }
 
     // Persist (or clear) the resume point every time the route actually changes -- covers
@@ -116,8 +144,7 @@ fun BibleScreen(
             is BibleRoute.Books -> BookListScreen(
                 books = books,
                 color = currentColor,
-                onSelectBook = { route = BibleRoute.Chapters(it) },
-                onSearch = { route = BibleRoute.Search }
+                onSelectBook = { route = BibleRoute.Chapters(it) }
             )
             is BibleRoute.Chapters -> ChapterGridScreen(
                 book = r.book,
@@ -174,11 +201,8 @@ fun BibleScreen(
 private fun BookListScreen(
     books: List<BibleBookInfo>,
     color: LiturgicalColor,
-    onSelectBook: (BibleBookInfo) -> Unit,
-    onSearch: () -> Unit
+    onSelectBook: (BibleBookInfo) -> Unit
 ) {
-    val onBg = MaterialTheme.colorScheme.onBackground
-    val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
     val accent = seasonAccent(color)
     val oldTestament = books.filter { it.testament == Testament.AGANO_LA_KALE }
     val newTestament = books.filter { it.testament == Testament.AGANO_JIPYA }
@@ -188,22 +212,6 @@ private fun BookListScreen(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        item {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text("Biblia", style = MaterialTheme.typography.headlineSmall, color = onBg)
-                    Text("Vitabu 66 kwa Kiswahili", style = MaterialTheme.typography.labelMedium, color = onBgDim)
-                }
-                IconButton(onClick = onSearch) {
-                    Icon(Icons.Filled.Search, contentDescription = "Tafuta andiko", tint = accent)
-                }
-            }
-        }
-
         item {
             Column {
                 OneUiSectionLabel("AGANO LA KALE", modifier = Modifier.padding(start = 4.dp))

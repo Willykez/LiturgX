@@ -74,14 +74,18 @@ fun SavedScreen(
     books: List<BibleBookInfo>,
     color: LiturgicalColor,
     onSelectVerse: (bookId: Int, chapterNum: Int, verseNum: Int) -> Unit,
+    onHeaderTextChange: (title: String, subtitle: String?) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val repository = remember { BibleBrowseRepository(context.applicationContext) }
     val userData = remember { BibleUserDataStore(context) }
     val accent = seasonAccent(color)
-    val onBg = MaterialTheme.colorScheme.onBackground
     val onBgDim = MaterialTheme.colorScheme.onSurfaceVariant
+
+    LaunchedEffect(Unit) {
+        onHeaderTextChange("Yaliyohifadhiwa", null)
+    }
 
     var tab by remember { mutableStateOf(SavedTab.BOOKMARKS) }
     // Bumped after any remove action so the list re-resolves against the store's current state.
@@ -109,12 +113,6 @@ fun SavedScreen(
     }
 
     Column(modifier.fillMaxSize().padding(top = 8.dp)) {
-        Text(
-            "Yaliyohifadhiwa",
-            style = MaterialTheme.typography.titleLarge,
-            color = onBg,
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
-        )
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(24.dp)

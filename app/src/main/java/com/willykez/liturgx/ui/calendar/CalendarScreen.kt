@@ -73,6 +73,7 @@ fun CalendarScreen(
     onJumpToToday: () -> Unit,
     onOpenInBible: (bookId: Int, chapterNum: Int, verseNum: Int) -> Unit = { _, _, _ -> },
     onOpenSaint: (saintId: Int) -> Unit = {},
+    onHeaderTextChange: (title: String, subtitle: String?) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -111,6 +112,13 @@ fun CalendarScreen(
 
     val visibleMonth = monthForPage(pagerState.currentPage)
 
+    // Reports the visible month up to the shared collapsing top bar (see Navigation.kt) --
+    // Calendar's own title is just "which month am I looking at", so unlike Home's header this
+    // is the whole thing, not a trimmed-down piece of a richer in-screen block.
+    LaunchedEffect(visibleMonth) {
+        onHeaderTextChange("${SwahiliDate.monthName(visibleMonth.monthValue)} ${visibleMonth.year}", null)
+    }
+
     fun stepMonth(delta: Long) {
         scope.launch {
             pagerState.animateScrollToPage((pagerState.currentPage + delta).toInt().coerceIn(0, PAGE_COUNT - 1))
@@ -121,24 +129,17 @@ fun CalendarScreen(
         Column(Modifier.fillMaxSize()) {
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    "${SwahiliDate.monthName(visibleMonth.monthValue)} ${visibleMonth.year}",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = onBg
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { showPicker = true }) {
-                        Icon(Icons.Filled.EditCalendar, contentDescription = "Chagua tarehe mahususi", tint = onBgDim)
-                    }
-                    IconButton(onClick = { stepMonth(-1) }) {
-                        Icon(Icons.Filled.ChevronLeft, contentDescription = "Mwezi uliopita", tint = onBg)
-                    }
-                    IconButton(onClick = { stepMonth(1) }) {
-                        Icon(Icons.Filled.ChevronRight, contentDescription = "Mwezi ujao", tint = onBg)
-                    }
+                IconButton(onClick = { showPicker = true }) {
+                    Icon(Icons.Filled.EditCalendar, contentDescription = "Chagua tarehe mahususi", tint = onBgDim)
+                }
+                IconButton(onClick = { stepMonth(-1) }) {
+                    Icon(Icons.Filled.ChevronLeft, contentDescription = "Mwezi uliopita", tint = onBg)
+                }
+                IconButton(onClick = { stepMonth(1) }) {
+                    Icon(Icons.Filled.ChevronRight, contentDescription = "Mwezi ujao", tint = onBg)
                 }
             }
 
