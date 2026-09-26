@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -73,8 +74,9 @@ fun PdfPreviewDialog(
                 Modifier
                     .fillMaxWidth()
                     .aspectRatio(595f / 842f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .border(1.dp, accent.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
+                    .shadow(10.dp, RoundedCornerShape(14.dp), ambientColor = accent.copy(alpha = 0.25f), spotColor = accent.copy(alpha = 0.3f))
+                    .clip(RoundedCornerShape(14.dp))
+                    .border(1.dp, accent.copy(alpha = 0.3f), RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 val bmp = previewBitmap
@@ -110,6 +112,7 @@ fun PdfPreviewDialog(
                         }
                     },
                     enabled = busy == PdfBusyAction.NONE,
+                    shape = RoundedCornerShape(50),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = accent)
                 ) {
                     Text(
@@ -126,6 +129,7 @@ fun PdfPreviewDialog(
                         PdfShareUtils.share(context, file)
                     },
                     enabled = busy == PdfBusyAction.NONE,
+                    shape = RoundedCornerShape(50),
                     colors = ButtonDefaults.buttonColors(containerColor = accent)
                 ) {
                     Text("Shiriki")

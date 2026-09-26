@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -39,6 +40,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -218,7 +221,18 @@ fun LiturgXApp() {
                     )
                 },
                 bottomBar = {
-                    NavigationBar(containerColor = Color.Transparent) {
+                    val navShape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+                    NavigationBar(
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
+                        modifier = Modifier
+                            .shadow(
+                                elevation = 12.dp,
+                                shape = navShape,
+                                ambientColor = Color.Black.copy(alpha = 0.12f),
+                                spotColor = Color.Black.copy(alpha = 0.16f),
+                            )
+                            .clip(navShape)
+                    ) {
                         val accent = seasonAccent(accentColor)
                         destinations.forEach { dest ->
                             val selected = currentRoute == dest.route

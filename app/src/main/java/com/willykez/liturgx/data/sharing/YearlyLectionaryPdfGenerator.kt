@@ -58,6 +58,7 @@ object YearlyLectionaryPdfGenerator {
     private const val INK = 0xFF231D2E.toInt()
     private const val INK_DIM = 0xFF5D5568.toInt()
     private const val PAPER = 0xFFFBF6EA.toInt()
+    private const val BRAND = 0xFF6B4E8E.toInt() // plum accent for chrome with no single day's liturgical colour (cover, month headers)
 
     /** Runs the day-by-day resolution (365/366 lookups, plus one Bible lookup per reading in
      *  [PdfContentMode.FULL_TEXT] mode) -- call from a background dispatcher. A single day's
@@ -123,15 +124,13 @@ object YearlyLectionaryPdfGenerator {
             val cursor = PageCursor(document)
             cursor.newPage()
 
-            cursor.drawText("KALENDA YA MASOMO $year", titlePaint())
-            cursor.advance(4)
-            val subtitle = if (mode == PdfContentMode.FULL_TEXT)
-                "Dominika zote na Sikukuu Maalum — Masomo Kamili — LiturgX"
-            else
-                "Dominika zote na Sikukuu Maalum — Marejeo — LiturgX"
-            cursor.drawText(subtitle, smallPaint(INK_DIM))
-            cursor.advance(10)
-            cursor.drawDivider()
+            cursor.drawCoverBand(
+                "KALENDA YA MASOMO $year",
+                if (mode == PdfContentMode.FULL_TEXT)
+                    "Dominika zote na Sikukuu Maalum \u2014 Masomo Kamili \u2014 LiturgX"
+                else
+                    "Dominika zote na Sikukuu Maalum \u2014 Marejeo \u2014 LiturgX"
+            )
             cursor.advance(16)
 
             var lastMonth = -1
@@ -145,8 +144,7 @@ object YearlyLectionaryPdfGenerator {
                     if (mode == PdfContentMode.FULL_TEXT || isNewMonth) cursor.newPage() else cursor.advance(10)
                 }
                 if (isNewMonth) {
-                    cursor.drawText(monthNames[entry.date.monthValue - 1].uppercase(), monthHeaderPaint())
-                    cursor.advance(8)
+                    cursor.drawMonthHeader(monthNames[entry.date.monthValue - 1].uppercase())
                     lastMonth = entry.date.monthValue
                 }
                 val dateLabel = "${weekdayNames[entry.date.dayOfWeek.value].orEmpty()}, ${entry.date.dayOfMonth} ${monthNames[entry.date.monthValue - 1]}"
@@ -283,6 +281,61 @@ object YearlyLectionaryPdfGenerator {
             c.drawLine(MARGIN.toFloat(), y.toFloat(), (PAGE_WIDTH - MARGIN).toFloat(), y.toFloat(), paint)
         }
 
+        /** Cover-page hero band, same flat-print translation of [DailyLiturgicalCard]'s glowing
+         *  header that [DailyReadingPdfGenerator.drawHeaderBand] uses -- but in [BRAND]'s fixed
+         *  plum rather than a day's liturgical colour, since a year-long index has no single
+         *  day's colour to reach for. */
+        fun drawCoverBand(title: String, subtitle: String) {
+            val titlePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                textSize = 18f
+                color = Color.WHITE
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                letterSpacing = 0.03f
+            }
+            val subPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                textSize = 10.5f
+                color = Color.argb(210, 255, 255, 255)
+            }
+            val padding = 18
+            val gap = 6
+            val titleH = kotlin.math.ceil(titlePaint.descent() - titlePaint.ascent()).toInt()
+            val subH = kotlin.math.ceil(subPaint.descent() - subPaint.ascent()).toInt()
+            val bandHeight = padding + titleH + gap + subH + padding
+            ensureSpace(bandHeight)
+            val c = canvas ?: return
+
+            c.save()
+            c.clipRect(0f, y.toFloat(), PAGE_WIDTH.toFloat(), (y + bandHeight).toFloat())
+            c.drawRect(0f, y.toFloat(), PAGE_WIDTH.toFloat(), (y + bandHeight).toFloat(), Paint().apply { color = BRAND })
+            c.drawCircle(PAGE_WIDTH - 60f, y + 6f, 70f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(30, 255, 255, 255) })
+            c.restore()
+
+            var textY = y + padding
+            c.drawText(title, MARGIN.toFloat(), (textY - titlePaint.ascent()), titlePaint)
+            textY += titleH + gap
+            c.drawText(subtitle, MARGIN.toFloat(), (textY - subPaint.ascent()), subPaint)
+            y += bandHeight
+        }
+
+        /** A month name with a short accent underline instead of plain bold text -- the same
+         *  "small colored bar + label" language [MonthGrid]/[ReadingBlock] use on-screen. */
+        fun drawMonthHeader(label: String) {
+            val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                textSize = 12.5f
+                color = INK
+                letterSpacing = 0.08f
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            }
+            val lineH = kotlin.math.ceil(paint.descent() - paint.ascent()).toInt()
+            ensureSpace(lineH + 8)
+            val c = canvas
+            if (c != null) {
+                c.drawText(label, MARGIN.toFloat(), (y - paint.ascent()), paint)
+                c.drawRect(MARGIN.toFloat(), (y + lineH + 2).toFloat(), (MARGIN + 26).toFloat(), (y + lineH + 5).toFloat(), Paint().apply { color = BRAND })
+            }
+            y += lineH + 9
+        }
+
         /** Compact mode: coloured date line, title, then each citation on its own line -- kept
          *  together as a unit, moved to a fresh page if it wouldn't fit rather than splitting a
          *  single day's block across a page boundary. */
@@ -298,11 +351,15 @@ object YearlyLectionaryPdfGenerator {
                 newPage()
             }
 
-            drawLine(dateLabel, dp)
+            val dotRadius = 3f
+            canvas?.drawCircle(MARGIN + dotRadius, (y + dotRadius * 1.3f), dotRadius, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = color.hex.toInt() })
+            drawLineIndented(dateLabel, dp, indent = 10)
             drawLine(title, tp)
             for (c in citations) {
-                drawLine("· ${c.label} — ${c.citation}", cp)
+                drawLine("\u00b7 ${c.label} \u2014 ${c.citation}", cp)
             }
+            advance(4)
+            drawDivider()
         }
 
         /** Full-text mode: date/title header (kept together), then each reading's label +
@@ -316,32 +373,79 @@ object YearlyLectionaryPdfGenerator {
          *  and forcing it to a fresh page wouldn't change that, so it isn't given the same
          *  measure-first treatment. */
         fun drawDayBlockFullText(dateLabel: String, title: String, color: LiturgicalColor, citations: List<CitationEntry>) {
-            val dp = dateLabelPaint(color)
-            val tp = titleRowPaint()
-            val headerLineH = kotlin.math.ceil(tp.descent() - tp.ascent()).toInt() + 2
-            if (y + headerLineH * 2 > PAGE_HEIGHT - MARGIN) newPage()
-
-            drawLine(dateLabel, dp)
-            drawLine(title, tp)
-            advance(6)
+            drawDayHeaderBand(dateLabel, title, color)
+            advance(14)
 
             val hp = readingHeadingPaint(color)
             val bp = bodyPaint()
             val fullPageCapacity = PAGE_HEIGHT - 2 * MARGIN
             for (c in citations) {
-                val headingText = "${c.label} — ${c.citation}"
+                val headingText = "${c.label} \u2014 ${c.citation}"
                 val bodyText = c.passageText ?: c.citation
                 val blockHeight = measureWrappedHeight(headingText, hp) + 3 + measureWrappedHeight(bodyText, bp)
 
-                if (y + blockHeight > PAGE_HEIGHT - MARGIN && blockHeight <= fullPageCapacity) {
+                if (y + blockHeight + 16 > PAGE_HEIGHT - MARGIN && blockHeight + 16 <= fullPageCapacity) {
                     newPage()
                 }
 
+                advance(12)
+                drawReadingCardBackground(color, blockHeight)
                 drawWrapped(headingText, hp)
                 advance(3)
                 drawWrapped(bodyText, bp)
-                advance(10)
+                advance(12)
             }
+        }
+
+        /** Compact colored header for one day's block in full-text mode -- one day per page in
+         *  this mode, so it can afford the same "band" treatment [DailyReadingPdfGenerator] gives
+         *  a whole page, just shorter. */
+        private fun drawDayHeaderBand(dateLabel: String, title: String, color: LiturgicalColor) {
+            val datePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                textSize = 10f
+                this.color = Color.argb(215, 255, 255, 255)
+                letterSpacing = 0.04f
+            }
+            val titlePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                textSize = 15f
+                this.color = Color.WHITE
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            }
+            val padding = 14
+            val gap = 5
+            val dateH = kotlin.math.ceil(datePaint.descent() - datePaint.ascent()).toInt()
+            val titleH = kotlin.math.ceil(titlePaint.descent() - titlePaint.ascent()).toInt()
+            val bandHeight = padding + dateH + gap + titleH + padding
+            ensureSpace(bandHeight)
+            val c = canvas ?: return
+
+            val hex = color.hex.toInt()
+            c.save()
+            c.clipRect(0f, y.toFloat(), PAGE_WIDTH.toFloat(), (y + bandHeight).toFloat())
+            c.drawRect(0f, y.toFloat(), PAGE_WIDTH.toFloat(), (y + bandHeight).toFloat(), Paint().apply { color = Color.rgb((hex shr 16) and 0xFF, (hex shr 8) and 0xFF, hex and 0xFF) })
+            c.drawCircle(PAGE_WIDTH - 40f, y + 4f, 46f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(30, 255, 255, 255) })
+            c.restore()
+
+            var textY = y + padding
+            c.drawText(dateLabel.uppercase(), MARGIN.toFloat(), (textY - datePaint.ascent()), datePaint)
+            textY += dateH + gap
+            c.drawText(title, MARGIN.toFloat(), (textY - titlePaint.ascent()), titlePaint)
+            y += bandHeight
+        }
+
+        /** Light rounded panel behind one reading in full-text mode -- same recipe as
+         *  [DailyReadingPdfGenerator.drawCardBackground], reused here so a full-text yearly
+         *  export and a single-day export read as the same product. */
+        private fun drawReadingCardBackground(color: LiturgicalColor, height: Int) {
+            val c = canvas ?: return
+            val hex = color.hex.toInt()
+            val r = (hex shr 16) and 0xFF
+            val g = (hex shr 8) and 0xFF
+            val b = hex and 0xFF
+            val pad = 9f
+            val rect = android.graphics.RectF((MARGIN - pad), (y - pad), (PAGE_WIDTH - MARGIN + pad), (y + height + pad))
+            c.drawRoundRect(rect, 9f, 9f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(15, r, g, b) })
+            c.drawRoundRect(rect, 9f, 9f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(55, r, g, b); style = Paint.Style.STROKE; strokeWidth = 1f })
         }
 
         /** Sums the height [drawWrapped] would need for [text], without drawing anything --
@@ -374,6 +478,25 @@ object YearlyLectionaryPdfGenerator {
             if (c != null) {
                 c.save()
                 c.translate(MARGIN.toFloat(), y.toFloat())
+                layout.draw(c)
+                c.restore()
+            }
+            y += height
+        }
+
+        /** Same as [drawLine] but offset [indent] points to the right -- used for the date
+         *  label so it clears the small colour dot drawn just before it. */
+        private fun drawLineIndented(text: String, paint: TextPaint, indent: Int) {
+            val layout = StaticLayout.Builder
+                .obtain(text, 0, text.length, paint, CONTENT_WIDTH - indent)
+                .setLineSpacing(1f, 1.05f)
+                .build()
+            val height = layout.height
+            ensureSpace(height)
+            val c = canvas
+            if (c != null) {
+                c.save()
+                c.translate((MARGIN + indent).toFloat(), y.toFloat())
                 layout.draw(c)
                 c.restore()
             }

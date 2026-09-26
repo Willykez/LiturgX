@@ -91,6 +91,7 @@ fun ImageSaveShareButtons(
                 }
             },
             enabled = busy == BusyAction.NONE,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = accent)
         ) {
             Icon(if (saved) Icons.Filled.Check else Icons.Filled.Download, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -116,6 +117,7 @@ fun ImageSaveShareButtons(
                 }
             },
             enabled = busy == BusyAction.NONE,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
             colors = ButtonDefaults.buttonColors(containerColor = accent)
         ) {
             Icon(Icons.Filled.IosShare, contentDescription = null, modifier = Modifier.size(18.dp))

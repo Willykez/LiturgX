@@ -50,24 +50,20 @@ object DailyReadingPdfGenerator {
         val cursor = PageCursor(document)
         cursor.newPage()
 
-        cursor.drawAccentBar(color)
+        cursor.drawHeaderBand(color, seasonText.uppercase(), dateText)
         cursor.advance(14)
-        cursor.drawText(seasonText.uppercase(), titlePaint(color))
-        cursor.advance(4)
-        cursor.drawText(dateText, smallPaint(INK_DIM))
-        cursor.advance(3)
         cursor.drawText("Rangi ya Liturujia: ${color.swahili.replaceFirstChar { it.uppercase() }}", smallPaint(color.hex.toInt()))
-        cursor.advance(10)
-        cursor.drawDivider()
-        cursor.advance(18)
+        cursor.advance(14)
 
         readings.forEachIndexed { index, reading ->
             val headerH = measureHeaderRowHeight(reading.kindLabel.uppercase(), reading.citation, headingPaint(color), citationPaint(INK_DIM))
             val bodyH = measureWrappedHeight(reading.passageText, bodyPaint())
             val responseH = reading.responseText?.let { measureWrappedHeight(it, italicPaint(INK_DIM)) + 8 } ?: 0
             val blockHeight = headerH + 8 + 1 + 14 + bodyH + responseH
-            cursor.keepTogetherIfPossible(blockHeight)
+            cursor.keepTogetherIfPossible(blockHeight + 16)
 
+            cursor.advance(14)
+            cursor.drawCardBackground(color, blockHeight)
             cursor.drawHeaderRow(reading.kindLabel.uppercase(), reading.citation, headingPaint(color), citationPaint(INK_DIM))
             cursor.advance(8)
             cursor.drawDivider()
@@ -79,12 +75,12 @@ object DailyReadingPdfGenerator {
                     cursor.drawText(line, italicPaint(INK_DIM))
                 }
             }
-            if (index != readings.lastIndex) {
-                cursor.advance(22)
-            }
+            cursor.advance(10)
         }
 
-        cursor.advance(24)
+        cursor.advance(18)
+        cursor.drawFooterRule(color)
+        cursor.advance(10)
         cursor.drawText("Imetumwa kutoka LiturgX", italicPaint(INK_DIM), alignEnd = true)
         cursor.finishPage()
 
@@ -235,6 +231,92 @@ object DailyReadingPdfGenerator {
             val paint = Paint().apply { this.color = color.hex.toInt() }
             c.drawRect(MARGIN.toFloat(), y.toFloat(), (PAGE_WIDTH - MARGIN).toFloat(), (y + 5).toFloat(), paint)
             y += 5
+        }
+
+        /** Full-bleed colored hero band across the top of page one -- the PDF's equivalent of
+         *  [DailyLiturgicalCard]'s dark glowing header, translated to flat print-safe shapes
+         *  (a solid color fill plus one soft translucent circle) since a PDF page has no
+         *  compositing tricks to lean on. Drawn as background only; it does not advance [y]
+         *  itself so the season/date text drawn immediately after lands on top of it. */
+        fun drawHeaderBand(color: LiturgicalColor, seasonText: String, dateText: String) {
+            val seasonPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                textSize = 17f
+                this.color = Color.WHITE
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                letterSpacing = 0.05f
+            }
+            val datePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                textSize = 10.5f
+                color = Color.argb(210, 255, 255, 255)
+            }
+            val padding = 18
+            val gap = 6
+            val seasonH = kotlin.math.ceil(seasonPaint.descent() - seasonPaint.ascent()).toInt()
+            val dateH = kotlin.math.ceil(datePaint.descent() - datePaint.ascent()).toInt()
+            val bandHeight = padding + seasonH + gap + dateH + padding
+            ensureSpace(bandHeight)
+            val c = canvas ?: return
+
+            val hex = color.hex.toInt()
+            val r = (hex shr 16) and 0xFF
+            val g = (hex shr 8) and 0xFF
+            val b = hex and 0xFF
+
+            c.save()
+            c.clipRect(0f, y.toFloat(), PAGE_WIDTH.toFloat(), (y + bandHeight).toFloat())
+            val bandPaint = Paint().apply { color = Color.rgb(r, g, b) }
+            c.drawRect(0f, y.toFloat(), PAGE_WIDTH.toFloat(), (y + bandHeight).toFloat(), bandPaint)
+            val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(35, 255, 255, 255) }
+            c.drawCircle(PAGE_WIDTH - 60f, y + 6f, 70f, glowPaint)
+            c.restore()
+
+            var textY = y + padding
+            val seasonBaseline = textY - seasonPaint.ascent()
+            c.drawText(seasonText, MARGIN.toFloat(), seasonBaseline, seasonPaint)
+            textY += seasonH + gap
+            val dateBaseline = textY - datePaint.ascent()
+            c.drawText(dateText, MARGIN.toFloat(), dateBaseline, datePaint)
+
+            y += bandHeight
+        }
+
+        /** A soft rounded panel behind one reading block -- the print analogue of
+         *  [DailyReadingSection]'s card treatment in the on-screen share image. Drawn using the
+         *  same [height] already computed for [keepTogetherIfPossible], so it exactly frames the
+         *  content about to be drawn on top of it; bleeds a few points beyond that box so text
+         *  never touches the rounded edge. Purely a background fill -- doesn't move [y]. */
+        fun drawCardBackground(color: LiturgicalColor, height: Int) {
+            val c = canvas ?: return
+            val hex = color.hex.toInt()
+            val r = (hex shr 16) and 0xFF
+            val g = (hex shr 8) and 0xFF
+            val b = hex and 0xFF
+            val pad = 10f
+            val rect = android.graphics.RectF(
+                (MARGIN - pad), (y - pad), (PAGE_WIDTH - MARGIN + pad), (y + height + pad)
+            )
+            val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(16, r, g, b) }
+            c.drawRoundRect(rect, 10f, 10f, fill)
+            val border = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.argb(60, r, g, b)
+                style = Paint.Style.STROKE
+                strokeWidth = 1f
+            }
+            c.drawRoundRect(rect, 10f, 10f, border)
+            val stripe = Paint().apply { color = Color.rgb(r, g, b) }
+            c.drawRoundRect(
+                android.graphics.RectF(MARGIN - pad, y - pad, MARGIN - pad + 4f, y + height + pad),
+                2f, 2f, stripe
+            )
+        }
+
+        /** A short accent-colored rule above the closing signature line, echoing the accent
+         *  strips used throughout the reading cards rather than a plain gray divider. */
+        fun drawFooterRule(color: LiturgicalColor) {
+            ensureSpace(2)
+            val c = canvas ?: return
+            val paint = Paint().apply { this.color = color.hex.toInt() }
+            c.drawRect(MARGIN.toFloat(), y.toFloat(), (MARGIN + 60).toFloat(), (y + 2).toFloat(), paint)
         }
 
         fun drawDivider() {
