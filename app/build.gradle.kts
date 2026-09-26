@@ -90,6 +90,7 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
+    implementation("androidx.compose.foundation:foundation:1.7.0") // or a newer version
 
     // Resolves a citation's Scripture text off the main thread (data/bible/BibleRepository.kt).
     implementation(libs.kotlinx.coroutines.core)
