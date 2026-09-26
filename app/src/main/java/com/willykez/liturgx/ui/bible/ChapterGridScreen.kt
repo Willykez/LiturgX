@@ -1,6 +1,7 @@
 package com.willykez.liturgx.ui.bible
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -17,6 +18,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.willykez.liturgx.core.LiturgicalColor
@@ -60,8 +63,13 @@ fun ChapterGridScreen(
                 Box(
                     Modifier
                         .aspectRatio(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(seasonAccentSoft(color))
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(seasonAccentSoft(color), seasonAccentSoft(color).copy(alpha = 0.5f))
+                            )
+                        )
+                        .border(1.dp, accent.copy(alpha = 0.25f), RoundedCornerShape(14.dp))
                         .clickable { onSelectChapter(chapterNum) },
                     contentAlignment = Alignment.Center
                 ) {
@@ -69,6 +77,7 @@ fun ChapterGridScreen(
                         chapterNum.toString(),
                         style = MaterialTheme.typography.bodyLarge,
                         color = accent,
+                        fontWeight = FontWeight.SemiBold,
                         textAlign = TextAlign.Center
                     )
                 }

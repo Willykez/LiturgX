@@ -13,6 +13,8 @@ import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -170,7 +172,9 @@ private fun DayCell(
                 .clip(CircleShape)
                 .then(
                     when {
-                        isSelected -> Modifier.background(selectionAccent)
+                        isSelected -> Modifier
+                            .shadow(4.dp, CircleShape, ambientColor = selectionAccent.copy(alpha = 0.4f), spotColor = selectionAccent.copy(alpha = 0.5f))
+                            .background(Brush.radialGradient(colors = listOf(selectionAccent, selectionAccent.copy(alpha = 0.85f))))
                         isToday -> Modifier.border(1.5.dp, ringColor, CircleShape)
                         else -> Modifier
                     }

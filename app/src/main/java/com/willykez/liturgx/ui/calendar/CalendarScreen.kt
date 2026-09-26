@@ -1,6 +1,7 @@
 package com.willykez.liturgx.ui.calendar
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -30,6 +31,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.willykez.liturgx.core.RegionSettings
@@ -186,8 +189,10 @@ fun CalendarScreen(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(16.dp)
+                .shadow(6.dp, RoundedCornerShape(50), ambientColor = accent.copy(alpha = 0.3f), spotColor = accent.copy(alpha = 0.35f))
                 .clip(RoundedCornerShape(50))
-                .background(onBg.copy(alpha = 0.08f))
+                .background(Brush.linearGradient(colors = listOf(accent.copy(alpha = 0.20f), accent.copy(alpha = 0.10f))))
+                .border(1.dp, accent.copy(alpha = 0.3f), RoundedCornerShape(50))
         ) {
             Icon(Icons.Filled.Today, contentDescription = null, tint = accent, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
@@ -234,7 +239,12 @@ private fun DaySummaryRow(
     val colorName = resolved.color.swahili.replaceFirstChar { it.uppercase() }
 
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(accent.copy(alpha = 0.08f))
+            .padding(horizontal = 14.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.Top
     ) {
@@ -248,6 +258,7 @@ private fun DaySummaryRow(
             Modifier
                 .clip(RoundedCornerShape(50))
                 .background(accent.copy(alpha = 0.16f))
+                .border(1.dp, accent.copy(alpha = 0.25f), RoundedCornerShape(50))
                 .padding(horizontal = 12.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {

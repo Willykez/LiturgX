@@ -10,6 +10,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.horizontalScroll
@@ -192,7 +193,9 @@ fun ChapterReaderScreen(
 
     Column(Modifier.fillMaxSize().padding(top = 8.dp)) {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack) {
@@ -204,20 +207,23 @@ fun ChapterReaderScreen(
                 color = onBg,
                 modifier = Modifier.weight(1f)
             )
-            IconButton(onClick = onPrevChapter, enabled = chapterNum > 1) {
-                Icon(
-                    Icons.Filled.ChevronLeft,
-                    contentDescription = "Sura iliyopita",
-                    tint = if (chapterNum > 1) onBg else onBgDim.copy(alpha = 0.3f)
-                )
-            }
-            IconButton(onClick = onNextChapter, enabled = chapterNum < book.chapterCount) {
-                Icon(
-                    Icons.Filled.ChevronRight,
-                    contentDescription = "Sura ijayo",
-                    tint = if (chapterNum < book.chapterCount) onBg else onBgDim.copy(alpha = 0.3f)
-                )
-            }
+            ChapterNavButton(
+                icon = Icons.Filled.ChevronLeft,
+                contentDescription = "Sura iliyopita",
+                enabled = chapterNum > 1,
+                accent = accent,
+                onBgDim = onBgDim,
+                onClick = onPrevChapter,
+            )
+            Spacer(Modifier.width(6.dp))
+            ChapterNavButton(
+                icon = Icons.Filled.ChevronRight,
+                contentDescription = "Sura ijayo",
+                enabled = chapterNum < book.chapterCount,
+                accent = accent,
+                onBgDim = onBgDim,
+                onClick = onNextChapter,
+            )
         }
 
         LazyColumn(
@@ -422,6 +428,32 @@ private fun citationFor(bookName: String, chapterNum: Int, positions: Set<Int>):
 }
 
 @Composable
+private fun ChapterNavButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    enabled: Boolean,
+    accent: Color,
+    onBgDim: Color,
+    onClick: () -> Unit,
+) {
+    Box(
+        Modifier
+            .size(36.dp)
+            .clip(androidx.compose.foundation.shape.CircleShape)
+            .background(if (enabled) accent.copy(alpha = 0.14f) else Color.Transparent)
+            .combinedClickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            icon,
+            contentDescription = contentDescription,
+            tint = if (enabled) accent else onBgDim.copy(alpha = 0.3f),
+            modifier = Modifier.size(22.dp),
+        )
+    }
+}
+
+@Composable
 private fun VerseLine(
     line: ChapterLine,
     emphasized: Boolean,
@@ -503,7 +535,15 @@ private fun SelectionActionRow(
     onToggleHighlight: () -> Unit,
     onAddNote: () -> Unit
 ) {
-    Column(Modifier.padding(start = 26.dp, end = 4.dp, top = 2.dp, bottom = 8.dp)) {
+    val shape = RoundedCornerShape(16.dp)
+    Column(
+        Modifier
+            .padding(start = 20.dp, end = 4.dp, top = 2.dp, bottom = 8.dp)
+            .clip(shape)
+            .background(accent.copy(alpha = 0.10f))
+            .border(1.dp, accent.copy(alpha = 0.22f), shape)
+            .padding(start = 6.dp, end = 4.dp, top = 6.dp, bottom = 6.dp)
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(citation, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = accent)

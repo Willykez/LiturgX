@@ -1,6 +1,7 @@
 package com.willykez.liturgx.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -32,6 +34,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
@@ -57,14 +61,31 @@ fun OneUiSectionLabel(text: String, modifier: Modifier = Modifier) {
     )
 }
 
-/** The rounded card container for one section's rows. */
+/** The rounded card container for one section's rows -- a soft tonal gradient with a hairline
+ *  edge and a gentle drop shadow, rather than a flat tint, so grouped cards read as raised
+ *  surfaces instead of shaded rectangles. */
 @Composable
 fun OneUiGroupCard(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    val shape = RoundedCornerShape(22.dp)
     Column(
         modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)),
+            .shadow(
+                elevation = 5.dp,
+                shape = shape,
+                ambientColor = Color.Black.copy(alpha = 0.10f),
+                spotColor = Color.Black.copy(alpha = 0.14f),
+            )
+            .clip(shape)
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.60f),
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.32f),
+                    )
+                )
+            )
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.14f), shape),
     ) {
         content()
     }
@@ -101,7 +122,15 @@ fun OneUiIconRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            modifier = Modifier.size(36.dp).clip(CircleShape).background(iconBackground),
+            modifier = Modifier
+                .size(38.dp)
+                .clip(CircleShape)
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(iconBackground, iconBackground.copy(alpha = 0.78f)),
+                        radius = 42f,
+                    )
+                ),
             contentAlignment = Alignment.Center,
         ) {
             Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
@@ -122,6 +151,14 @@ fun OneUiIconRow(
         if (trailing != null) {
             Spacer(Modifier.width(12.dp))
             trailing()
+        } else if (onClick != null) {
+            Spacer(Modifier.width(8.dp))
+            Icon(
+                Icons.Filled.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.size(18.dp),
+            )
         }
     }
 }

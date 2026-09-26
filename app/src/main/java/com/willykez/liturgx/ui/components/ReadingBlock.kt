@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -13,6 +14,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -25,6 +27,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -110,13 +116,25 @@ fun ReadingBlock(
     }
 
     val canExpand = resolveState != ResolveState.UNAVAILABLE
+    val chevronRotation by animateFloatAsState(if (expanded) 180f else 0f, label = "chevron")
+    val cardShape = RoundedCornerShape(20.dp)
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(seasonAccentSoft(color))
-            .border(1.dp, accent.copy(alpha = 0.35f), RoundedCornerShape(18.dp))
+            .shadow(
+                elevation = 4.dp,
+                shape = cardShape,
+                ambientColor = accent.copy(alpha = 0.18f),
+                spotColor = accent.copy(alpha = 0.22f),
+            )
+            .clip(cardShape)
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(seasonAccentSoft(color), seasonAccentSoft(color).copy(alpha = 0.55f))
+                )
+            )
+            .border(1.dp, accent.copy(alpha = 0.30f), cardShape)
             .clickable(enabled = canExpand) {
                 resolveIfNeeded()
                 expanded = !expanded
@@ -124,7 +142,15 @@ fun ReadingBlock(
             .padding(16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Icon(kind.icon, contentDescription = null, tint = accent, modifier = Modifier.size(20.dp))
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(CircleShape)
+                    .background(Brush.radialGradient(colors = listOf(accent, accent.copy(alpha = 0.75f)))),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(kind.icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+            }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(
@@ -146,12 +172,13 @@ fun ReadingBlock(
                 )
             } else if (canExpand) {
                 Icon(
-                    if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                    Icons.Filled.ExpandMore,
                     contentDescription = if (expanded) "Funga andiko" else "Fungua andiko",
                     tint = onBgDim,
                     modifier = Modifier
                         .padding(end = 4.dp)
                         .size(18.dp)
+                        .rotate(chevronRotation)
                 )
             }
             IconButton(onClick = {

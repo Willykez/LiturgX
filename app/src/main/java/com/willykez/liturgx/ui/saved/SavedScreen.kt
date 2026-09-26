@@ -39,6 +39,7 @@ import com.willykez.liturgx.data.bible.BibleUserDataStore
 import com.willykez.liturgx.ui.components.OneUiGroupCard
 import com.willykez.liturgx.ui.components.OneUiIconRow
 import com.willykez.liturgx.ui.components.OneUiRowDivider
+import com.willykez.liturgx.ui.components.OneUiSegmentedRow
 import com.willykez.liturgx.ui.theme.seasonAccent
 
 private enum class SavedTab(val label: String) { BOOKMARKS("Alama"), HIGHLIGHTS("Iliyoangaziwa"), NOTES("Dokezo") }
@@ -115,19 +116,14 @@ fun SavedScreen(
 
     Column(modifier.fillMaxSize().padding(top = 8.dp)) {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(24.dp)
+            Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
-            SavedTab.entries.forEach { t ->
-                val selected = t == tab
-                Text(
-                    t.label,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                    color = if (selected) accent else onBgDim,
-                    modifier = Modifier.clickable { tab = t }
-                )
-            }
+            OneUiSegmentedRow(
+                options = SavedTab.entries.map { it to it.label },
+                selected = tab,
+                accent = accent,
+                onSelect = { tab = it },
+            )
         }
 
         if (entries.isEmpty()) {

@@ -1,10 +1,12 @@
 package com.willykez.liturgx.ui.components
 
 import android.content.Intent
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material.icons.filled.PictureAsPdf
@@ -21,6 +23,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
@@ -170,37 +175,61 @@ fun DailyReadingsView(
                 }
 
                 if (showHeader) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        LiturgicalSeal(resolved.color, size = 40.dp)
-                        Spacer(Modifier.width(14.dp))
-                        Text(
-                            "Rangi ya Liturujia: ${resolved.color.swahili}"
-                                    + (resolved.cycleYear?.let { " · Mwaka $it" } ?: "")
-                                    + (resolved.weekdayCycle?.let { " · Mzunguko $it" } ?: ""),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = accent
-                        )
-                    }
-
-                    resolved.overridingSaint?.let { saint ->
-                        Spacer(Modifier.height(10.dp))
-                        AssistChip(
-                            text = "${saint.daraja} — ${resolved.label}",
-                            accentHex = accent,
-                            onClick = onOpenSaint?.let { open -> { open(saint.id) } }
-                        )
-                    }
-                    dayResult.optionalMemorial?.let { memorial ->
-                        Spacer(Modifier.height(8.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Filled.Star, contentDescription = null, tint = onBgDim, modifier = Modifier.size(14.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                "Leo pia ni ukumbusho wa hiari wa ${memorial.jina}",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = onBgDim,
-                                fontStyle = FontStyle.Italic
+                    val heroShape = RoundedCornerShape(24.dp)
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .shadow(
+                                elevation = 8.dp,
+                                shape = heroShape,
+                                ambientColor = accent.copy(alpha = 0.22f),
+                                spotColor = accent.copy(alpha = 0.26f),
                             )
+                            .clip(heroShape)
+                            .background(
+                                Brush.linearGradient(
+                                    colors = listOf(accent.copy(alpha = 0.20f), accent.copy(alpha = 0.05f))
+                                )
+                            )
+                            .border(1.dp, accent.copy(alpha = 0.22f), heroShape)
+                            .padding(16.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            LiturgicalSeal(resolved.color, size = 48.dp)
+                            Spacer(Modifier.width(14.dp))
+                            Column {
+                                Text(seasonLabel, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    "Rangi ya Liturujia: ${resolved.color.swahili}"
+                                            + (resolved.cycleYear?.let { " · Mwaka $it" } ?: "")
+                                            + (resolved.weekdayCycle?.let { " · Mzunguko $it" } ?: ""),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = accent
+                                )
+                            }
+                        }
+
+                        resolved.overridingSaint?.let { saint ->
+                            Spacer(Modifier.height(12.dp))
+                            AssistChip(
+                                text = "${saint.daraja} — ${resolved.label}",
+                                accentHex = accent,
+                                onClick = onOpenSaint?.let { open -> { open(saint.id) } }
+                            )
+                        }
+                        dayResult.optionalMemorial?.let { memorial ->
+                            Spacer(Modifier.height(8.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Filled.Star, contentDescription = null, tint = onBgDim, modifier = Modifier.size(14.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    "Leo pia ni ukumbusho wa hiari wa ${memorial.jina}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = onBgDim,
+                                    fontStyle = FontStyle.Italic
+                                )
+                            }
                         }
                     }
                 }
