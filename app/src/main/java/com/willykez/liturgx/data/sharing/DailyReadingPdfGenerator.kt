@@ -247,7 +247,7 @@ object DailyReadingPdfGenerator {
             }
             val datePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
                 textSize = 10.5f
-                color = Color.argb(210, 255, 255, 255)
+                this.color = Color.argb(210, 255, 255, 255)
             }
             val padding = 18
             val gap = 6
@@ -264,9 +264,9 @@ object DailyReadingPdfGenerator {
 
             c.save()
             c.clipRect(0f, y.toFloat(), PAGE_WIDTH.toFloat(), (y + bandHeight).toFloat())
-            val bandPaint = Paint().apply { color = Color.rgb(r, g, b) }
+            val bandPaint = Paint().apply { this.color = Color.rgb(r, g, b) }
             c.drawRect(0f, y.toFloat(), PAGE_WIDTH.toFloat(), (y + bandHeight).toFloat(), bandPaint)
-            val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(35, 255, 255, 255) }
+            val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = Color.argb(35, 255, 255, 255) }
             c.drawCircle(PAGE_WIDTH - 60f, y + 6f, 70f, glowPaint)
             c.restore()
 
@@ -295,15 +295,15 @@ object DailyReadingPdfGenerator {
             val rect = android.graphics.RectF(
                 (MARGIN - pad), (y - pad), (PAGE_WIDTH - MARGIN + pad), (y + height + pad)
             )
-            val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(16, r, g, b) }
+            val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = Color.argb(16, r, g, b) }
             c.drawRoundRect(rect, 10f, 10f, fill)
             val border = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.argb(60, r, g, b)
+                this.color = Color.argb(60, r, g, b)
                 style = Paint.Style.STROKE
                 strokeWidth = 1f
             }
             c.drawRoundRect(rect, 10f, 10f, border)
-            val stripe = Paint().apply { color = Color.rgb(r, g, b) }
+            val stripe = Paint().apply { this.color = Color.rgb(r, g, b) }
             c.drawRoundRect(
                 android.graphics.RectF(MARGIN - pad, y - pad, MARGIN - pad + 4f, y + height + pad),
                 2f, 2f, stripe

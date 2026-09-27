@@ -1,9 +1,10 @@
 name: Build APK (CI)
 
 # Runs on every push, to any branch, so a broken build is caught immediately instead of only
-# being discovered the next time someone pushes a "v*" tag. Builds just the signed release
-# APK -- no AAB, no GitHub Release -- for fast feedback plus a downloadable APK for quick
-# manual testing from the Actions tab.
+# being discovered the next time someone pushes a "v*" tag. Also runs on every pull request, so
+# a broken build shows up as a check on the PR itself before it's merged, not just after landing
+# on a branch. Builds just the signed release APK -- no AAB, no GitHub Release -- for fast
+# feedback plus a downloadable APK for quick manual testing from the Actions tab.
 #
 # Tag pushes are excluded here (tags-ignore) so pushing "v1.2" doesn't trigger this workflow
 # too, on top of release.yml -- that one already covers tags, with the fuller APK + AAB +
@@ -15,6 +16,7 @@ on:
   push:
     tags-ignore:
       - "**"
+  pull_request: {}
   workflow_dispatch: {}
 
 jobs:

@@ -352,7 +352,7 @@ object YearlyLectionaryPdfGenerator {
             }
 
             val dotRadius = 3f
-            canvas?.drawCircle(MARGIN + dotRadius, (y + dotRadius * 1.3f), dotRadius, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = color.hex.toInt() })
+            canvas?.drawCircle(MARGIN + dotRadius, (y + dotRadius * 1.3f), dotRadius, Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color.hex.toInt() })
             drawLineIndented(dateLabel, dp, indent = 10)
             drawLine(title, tp)
             for (c in citations) {
@@ -422,8 +422,8 @@ object YearlyLectionaryPdfGenerator {
             val hex = color.hex.toInt()
             c.save()
             c.clipRect(0f, y.toFloat(), PAGE_WIDTH.toFloat(), (y + bandHeight).toFloat())
-            c.drawRect(0f, y.toFloat(), PAGE_WIDTH.toFloat(), (y + bandHeight).toFloat(), Paint().apply { color = Color.rgb((hex shr 16) and 0xFF, (hex shr 8) and 0xFF, hex and 0xFF) })
-            c.drawCircle(PAGE_WIDTH - 40f, y + 4f, 46f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(30, 255, 255, 255) })
+            c.drawRect(0f, y.toFloat(), PAGE_WIDTH.toFloat(), (y + bandHeight).toFloat(), Paint().apply { this.color = Color.rgb((hex shr 16) and 0xFF, (hex shr 8) and 0xFF, hex and 0xFF) })
+            c.drawCircle(PAGE_WIDTH - 40f, y + 4f, 46f, Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = Color.argb(30, 255, 255, 255) })
             c.restore()
 
             var textY = y + padding
@@ -444,8 +444,8 @@ object YearlyLectionaryPdfGenerator {
             val b = hex and 0xFF
             val pad = 9f
             val rect = android.graphics.RectF((MARGIN - pad), (y - pad), (PAGE_WIDTH - MARGIN + pad), (y + height + pad))
-            c.drawRoundRect(rect, 9f, 9f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(15, r, g, b) })
-            c.drawRoundRect(rect, 9f, 9f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(55, r, g, b); style = Paint.Style.STROKE; strokeWidth = 1f })
+            c.drawRoundRect(rect, 9f, 9f, Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = Color.argb(15, r, g, b) })
+            c.drawRoundRect(rect, 9f, 9f, Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = Color.argb(55, r, g, b); style = Paint.Style.STROKE; strokeWidth = 1f })
         }
 
         /** Sums the height [drawWrapped] would need for [text], without drawing anything --
