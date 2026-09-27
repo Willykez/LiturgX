@@ -1,18 +1,15 @@
 name: Signed Release Build
 
-# Builds a signed release APK + AAB using the four repository secrets already configured
-# (KEYSTORE_B64, KEY_ALIAS, KEY_PASSWORD, STORE_PASSWORD):
-#   - Push a tag like "v1.1" to build + publish a GitHub Release with the signed files attached.
-#   - Or run it manually from the Actions tab (workflow_dispatch) any time -- the signed
-#     APK/AAB is still attached to the run as a downloadable artifact either way, tag or not.
 on:
   push:
-    tags:
-      - "v*"
-  workflow_dispatch: {}
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
 
 permissions:
-  contents: write # only needed for the tag-triggered "create a Release" step
+  contents: write
 
 jobs:
   build-signed:
